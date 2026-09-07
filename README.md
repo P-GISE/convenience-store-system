@@ -16,6 +16,34 @@
 | 화면 방식 | Thymeleaf 서버 렌더링 |
 | 보안 | 세션 인증, 역할 기반 접근 제어, CSRF 토큰 |
 
+## 소스 검토 기준
+
+이 README는 루트의 `src/main/java`, `src/main/resources/templates`, `src/main/resources/application*.properties`, `src/test/java`, `build.gradle`을 기준으로 다시 작성했습니다. 저장소에는 `ordersystem2/`라는 이전 구조도 함께 남아 있지만, 실제로 정리된 활성 애플리케이션은 루트 `src/` 기준입니다. 빌드 산출물, 실제 DB 데이터, IDE 설정, 외부 의존성 캐시는 문서 근거에서 제외했습니다.
+
+검토 결과 이 프로젝트는 단순 CRUD 예제가 아니라 편의점 운영자가 상품 재고, 발주, 입고/출고, 고객 주문, 폐기 예정 상품을 관리하는 Spring Boot/Thymeleaf 기반 업무 시스템입니다. 사용자 역할, CSRF 방어, 세션 인증, 동시성 테스트까지 포함되어 있습니다.
+
+## 소스 기준 기능 지도
+
+| 기능 영역 | 확인한 주요 파일 | 실제로 구현된 내용 |
+| --- | --- | --- |
+| 인증/권한 | `AuthController.java`, `UserService.java`, `AccessControlService.java` | 회원가입, 로그인, 세션 사용자, 역할 기반 접근 제어 |
+| CSRF | `CsrfTokenService.java`, `CsrfInterceptor.java`, `CsrfModelAdvice.java` | 폼 요청에 CSRF 토큰을 발급/검증하고 Thymeleaf 모델에 주입 |
+| 재고 | `InventoryController.java`, `InventoryService.java`, `Inventory.java` | 상품 등록/수정, 재고 수량, 유통기한, 상태, 폐기 처리 |
+| 발주/입고 | `OrderController.java`, `OrderService.java`, `Order.java`, `OrderType.java` | 발주 생성, 상태 변경, 입고 처리, 주문 유형 관리 |
+| 고객 주문 | `CustomerOrderController.java`, `CustomerOrderService.java`, `CustomerOrder.java` | 고객 주문 생성, 픽업/배송 유형, 주문 상태 관리 |
+| 입출고 이력 | `StockTransactionController.java`, `StockTransactionService.java`, `StockTransaction.java` | 재고 이동 내역, 처리 상태, 관리자 확인 흐름 |
+| 스케줄러 | `AutomaticDisposalScheduler.java`, `InventoryScheduler.java` | 폐기 예정 상품 자동 감지, 주기적 재고 상태 갱신 |
+| 화면 | `src/main/resources/templates/*.html` | 대시보드, 재고, 발주, 고객 주문, 입출고, 로그인/회원가입 화면 |
+| 테스트 | `src/test/java/**/*.java` | 웹 보안, 고객 주문, 재고/발주 서비스, 동시성, 애플리케이션 컨텍스트 검증 |
+
+## 처음 검토할 때 볼 순서
+
+1. `build.gradle`과 `application-demo.properties`를 보고 H2 demo 모드로 실행 환경을 잡습니다.
+2. `src/main/java/.../model`에서 재고/발주/고객 주문 도메인을 확인합니다.
+3. `src/main/java/.../service`를 보면 재고 차감, 입고, 폐기, 권한 규칙이 보입니다.
+4. `src/main/resources/templates`에서 실제 업무 화면 구성을 확인합니다.
+5. `src/test/java`를 보면 CSRF, 권한, 동시성, 주문 처리 검증 범위를 확인할 수 있습니다.
+
 ## 서비스 사용 흐름
 
 1. 사용자가 회원가입 후 로그인합니다.
