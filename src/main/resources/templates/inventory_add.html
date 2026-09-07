@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('재고 등록')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('inventory')}"></nav>
+
+<main class="app-shell app-shell-narrow">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">본사 운영</p>
+      <h1 class="page-title">재고 등록</h1>
+      <p class="page-description">품목별 현재 재고를 수동으로 등록하거나 기존 재고 수량을 업데이트합니다.</p>
+    </div>
+  </header>
+
+  <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}">성공</div>
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}">오류</div>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">재고 정보</h2>
+    </div>
+    <div class="panel-body">
+      <form th:action="@{/inventory/add}" method="post" th:object="${inventoryCreateDTO}">
+        <input type="hidden" name="_csrf" th:value="${csrfToken}" />
+
+        <div class="mb-3">
+          <label for="orderTypeId" class="form-label">품목</label>
+          <select class="form-select" id="orderTypeId" th:field="*{orderTypeId}" required aria-describedby="orderTypeHelp orderTypeError">
+            <option value="" disabled selected>품목 선택</option>
+            <option th:each="type : ${orderTypes}" th:value="${type.id}" th:text="${type.name}">품목</option>
+          </select>
+          <div id="orderTypeHelp" class="form-text">이미 등록된 품목을 선택하면 기존 재고 수량을 업데이트합니다.</div>
+          <div id="orderTypeError" th:if="${#fields.hasErrors('orderTypeId')}" class="field-error mt-1" th:errors="*{orderTypeId}">품목 오류</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="quantity" class="form-label">재고 수량</label>
+          <input type="number" class="form-control" id="quantity" th:field="*{quantity}" min="0" required
+                 aria-describedby="quantityHelp quantityError" />
+          <div id="quantityHelp" class="form-text">0개 이상 입력하세요.</div>
+          <div id="quantityError" th:if="${#fields.hasErrors('quantity')}" class="field-error mt-1" th:errors="*{quantity}">수량 오류</div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">저장</button>
+          <a th:href="@{/inventory}" class="btn btn-outline-primary">취소</a>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

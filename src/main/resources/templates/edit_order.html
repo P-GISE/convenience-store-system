@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('발주 수정')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('orders')}"></nav>
+
+<main class="app-shell app-shell-narrow">
+    <header class="page-header">
+        <div>
+            <p class="page-kicker">점주 운영</p>
+            <h1 class="page-title">발주 수정</h1>
+            <p class="page-description">요청 접수 상태인 발주만 수정할 수 있습니다.</p>
+        </div>
+    </header>
+
+    <div th:if="${param.error}" class="alert alert-danger" role="alert">
+        <span th:if="${param.error[0] == 'order_not_found'}">발주를 찾을 수 없습니다.</span>
+        <span th:if="${param.error[0] == 'order_locked'}">본사 처리가 시작된 요청은 수정할 수 없습니다.</span>
+        <span th:if="${param.error[0] == 'unexpected_error'}">처리 중 오류가 발생했습니다. 다시 시도해주세요.</span>
+        <span th:if="${param.error[0] != 'order_not_found' and param.error[0] != 'order_locked' and param.error[0] != 'unexpected_error'}" th:text="${param.error[0]}">오류</span>
+    </div>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">요청 정보</h2>
+            <span class="status-badge status-received">요청 접수</span>
+        </div>
+        <div class="panel-body">
+            <form th:action="@{/orders/edit/{id}(id=${order.id})}" th:object="${orderUpdate}" method="post">
+                <input type="hidden" name="_csrf" th:value="${csrfToken}" />
+
+                <div class="mb-3">
+                    <label for="orderTypeId" class="form-label">품목</label>
+                    <select id="orderTypeId" th:field="*{orderTypeId}" class="form-select" required aria-describedby="orderTypeError">
+                        <option value="" disabled>품목 선택</option>
+                        <option th:each="type : ${orderTypes}" th:value="${type.id}" th:text="${type.name}">품목</option>
+                    </select>
+                    <div id="orderTypeError" th:if="${#fields.hasErrors('orderTypeId')}" class="field-error mt-1" th:errors="*{orderTypeId}">품목 오류</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">요청 수량</label>
+                    <input type="number" id="quantity" th:field="*{quantity}" min="1" class="form-control" required
+                           aria-describedby="quantityHelp quantityError" />
+                    <div id="quantityHelp" class="form-text">1개 이상 입력하세요.</div>
+                    <div id="quantityError" th:if="${#fields.hasErrors('quantity')}" class="field-error mt-1" th:errors="*{quantity}">수량 오류</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">저장</button>
+                    <a th:href="@{/orders}" class="btn btn-outline-primary">취소</a>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!-- src/main/resources/templates/inventory_edit.html -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>재고 수정</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- 내부 스타일 시트 -->
+  <style>
+    /* 전체 페이지 스타일링 */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f0f2f5;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    .navbar-brand {
+        font-weight: bold;
+        font-size: 1.5rem;
+    }
+
+    /* 네비게이션 바 스타일링 */
+    .navbar {
+        background-color: #007bff;
+        padding: 15px 20px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .navbar a {
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        margin-left: 15px;
+    }
+
+    .navbar a:hover {
+        text-decoration: underline;
+    }
+
+    /* 콘텐츠 컨테이너 */
+    .container {
+        flex: 1;
+        padding: 40px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* 폼 스타일링 */
+    .form-container {
+        width: 100%;
+        max-width: 600px;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 버튼 스타일링 */
+    .btn-primary {
+        background-color: #007bff;
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    /* 피드백 메시지 스타일링 */
+    .alert {
+        width: 100%;
+        max-width: 800px;
+        margin-top: 20px;
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 600px) {
+        th, td {
+            padding: 10px 15px;
+        }
+
+        .navbar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .navbar a {
+            margin: 5px 0 0 0;
+        }
+
+        .container {
+            padding: 20px 10px;
+        }
+
+        .form-container {
+            padding: 20px;
+        }
+    }
+  </style>
+</head>
+<body>
+<!-- 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" th:href="@{/}">재고 관리 시스템</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/inventory}">재고 확인</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/orders}">주문 관리</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/dashboard}">대시보드</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/stock-transactions}">재고 트랜잭션</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/logout}">로그아웃</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- 콘텐츠 컨테이너 -->
+<div class="container">
+  <h2>재고 수정</h2>
+
+  <!-- 피드백 메시지 표시 -->
+  <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+  <div class="form-container">
+    <form th:action="@{'/inventory/edit/' + ${inventory.id}}" th:object="${inventory}" method="post">
+
+      <!-- 발주 종류 선택 필드 -->
+      <div class="mb-3">
+        <label for="orderType" class="form-label">발주 종류</label>
+        <select class="form-select" id="orderType" name="orderTypeId" required>
+          <option value="" disabled>발주 종류 선택</option>
+          <option th:each="type : ${orderTypes}"
+                  th:value="${type.id}"
+                  th:text="${type.name}"
+                  th:selected="${type.id == inventory.orderType.id}">
+            종류
+          </option>
+        </select>
+      </div>
+
+      <!-- 재고 수량 수정 필드 -->
+      <div class="mb-3">
+        <label for="quantity" class="form-label">재고 수량</label>
+        <input type="number" class="form-control" id="quantity"
+               th:field="*{quantity}" min="0" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary">수정</button>
+    </form>
+  </div>
+</div>
+
+<!-- Bootstrap JS 및 종속성 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

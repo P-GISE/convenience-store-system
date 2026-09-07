@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('입고 이력')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('transactions')}"></nav>
+
+<main class="app-shell">
+    <header class="page-header">
+        <div>
+            <p class="page-kicker">본사 운영</p>
+            <h1 class="page-title">입고 이력</h1>
+            <p class="page-description">입고 완료 처리로 기록된 재고 트랜잭션입니다. 폐기 처리는 완료된 입고 건에만 가능합니다.</p>
+        </div>
+    </header>
+
+    <div th:if="${param.success}" class="alert alert-success" role="alert">
+        입고 건이 폐기 처리되었습니다.
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}">오류</div>
+
+    <section class="panel table-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">입고 트랜잭션</h2>
+            <a th:href="@{/inventory/disposed}" class="btn btn-outline-primary btn-sm">폐기 이력 보기</a>
+        </div>
+        <div class="table-scroll">
+            <table class="table app-table responsive-stack">
+                <caption>입고 트랜잭션 목록</caption>
+                <thead>
+                <tr>
+                    <th scope="col">거래 ID</th>
+                    <th scope="col">요청 ID</th>
+                    <th scope="col">품목</th>
+                    <th scope="col" class="number-cell">수량</th>
+                    <th scope="col">입고일</th>
+                    <th scope="col">상태</th>
+                    <th scope="col">작업</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="transaction : ${transactions}">
+                    <th scope="row" data-label="거래 ID" th:text="${transaction.id}">1</th>
+                    <td data-label="요청 ID" th:text="${transaction.order != null ? transaction.order.id : '-'}">1001</td>
+                    <td data-label="품목" th:text="${transaction.orderType.name}">삼각김밥</td>
+                    <td data-label="수량" class="number-cell"><span th:text="${transaction.quantity}">50</span>개</td>
+                    <td data-label="입고일" class="date-cell" th:text="${#temporals.format(transaction.transactionDate, 'yyyy-MM-dd HH:mm')}">2026-08-02 10:00</td>
+                    <td data-label="상태">
+                        <span class="status-badge"
+                              th:classappend="${transaction.status.name() == 'DISPOSED'} ? ' status-disposed' : ' status-completed'"
+                              th:text="${transaction.status.name() == 'DISPOSED'} ? '폐기 완료' : '입고 완료'">입고 완료</span>
+                    </td>
+                    <td data-label="작업" class="action-cell">
+                        <form th:if="${transaction.status.name() == 'COMPLETED'}"
+                              th:action="@{/inventory/dispose/{id}(id=${transaction.id})}" method="post"
+                              onsubmit="return confirm('이 입고 건을 폐기 처리하시겠습니까?');">
+                            <input type="hidden" name="_csrf" th:value="${csrfToken}" />
+                            <button type="submit" class="btn btn-danger btn-sm">폐기 처리</button>
+                        </form>
+                        <span th:if="${transaction.status.name() != 'COMPLETED'}" class="text-muted small">처리 완료</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(transactions)}">
+                    <td colspan="7" class="empty-state">
+                        <strong>입고 이력이 없습니다.</strong>
+                        대시보드에서 요청을 입고 완료 처리하면 이곳에 기록됩니다.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

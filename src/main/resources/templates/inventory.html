@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('재고 현황')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('inventory')}"></nav>
+
+<main class="app-shell">
+    <header class="page-header">
+        <div>
+            <p class="page-kicker">재고 운영</p>
+            <h1 class="page-title">재고 현황</h1>
+            <p class="page-description">입고 완료된 요청과 본사 수동 등록으로 관리되는 현재 활성 재고입니다.</p>
+        </div>
+        <a th:href="@{/inventory/add}" class="btn btn-primary" th:if="${isHeadquarters}">재고 등록</a>
+    </header>
+
+    <div th:if="${success}" class="alert alert-success" role="alert" th:text="${success}">재고가 처리되었습니다.</div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}">오류</div>
+
+    <section class="panel table-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">활성 재고</h2>
+            <span class="text-muted small">수량은 입고 완료 시 자동 증가합니다.</span>
+        </div>
+        <div class="table-scroll">
+            <table class="table app-table responsive-stack">
+                <caption>활성 재고 목록</caption>
+                <thead>
+                <tr>
+                    <th scope="col">품목</th>
+                    <th scope="col" class="number-cell">재고 수량</th>
+                    <th scope="col" th:if="${isHeadquarters}">작업</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="inventory : ${inventories}">
+                    <th scope="row" data-label="품목" th:text="${inventory.orderType.name}">삼각김밥</th>
+                    <td data-label="재고 수량" class="number-cell"><span th:text="${inventory.quantity}">100</span>개</td>
+                    <td th:if="${isHeadquarters}" data-label="작업" class="action-cell">
+                        <a th:href="@{'/inventory/edit/' + ${inventory.id}}" class="btn btn-outline-primary btn-sm">수정</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(inventories)}">
+                    <td th:colspan="${isHeadquarters} ? 3 : 2" class="empty-state">
+                        <strong>등록된 재고가 없습니다.</strong>
+                        <span th:if="${isHeadquarters}">재고 등록에서 첫 품목을 등록하세요.</span>
+                        <span th:if="${!isHeadquarters}">본사에서 재고를 등록하거나 입고 처리하면 이곳에 표시됩니다.</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(pageTitle)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${pageTitle} + ' | 편의점 운영 허브'">편의점 운영 허브</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body>
+<nav th:fragment="navbar(active)" class="navbar navbar-expand-lg app-navbar">
+    <div class="container-fluid">
+        <a class="navbar-brand app-brand" th:href="${session.username != null} ? @{/home2} : @{/}">편의점 운영 허브</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#appNavbar"
+                aria-controls="appNavbar" aria-expanded="false" aria-label="메뉴 열기">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="appNavbar">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${active == 'shop'} ? ' active' : ''"
+                       th:href="@{/shop}">고객 주문</a>
+                </li>
+                <li class="nav-item" th:if="${session.role == 'STORE_OWNER'}">
+                    <a class="nav-link" th:classappend="${active == 'customer-orders'} ? ' active' : ''"
+                       th:href="@{/customer-orders}">고객 주문 처리</a>
+                </li>
+                <li class="nav-item" th:if="${session.username != null}">
+                    <a class="nav-link" th:classappend="${active == 'inventory'} ? ' active' : ''"
+                       th:href="@{/inventory}">재고 현황</a>
+                </li>
+                <li class="nav-item" th:if="${session.username != null}">
+                    <a class="nav-link" th:classappend="${active == 'orders'} ? ' active' : ''"
+                       th:href="@{/orders}"
+                       th:text="${session.role == 'HEADQUARTERS'} ? '발주 내역' : '발주 요청'">발주 요청</a>
+                </li>
+                <li class="nav-item" th:if="${session.role == 'HEADQUARTERS'}">
+                    <a class="nav-link" th:classappend="${active == 'dashboard'} ? ' active' : ''"
+                       th:href="@{/dashboard}">처리 대시보드</a>
+                </li>
+                <li class="nav-item" th:if="${session.role == 'HEADQUARTERS'}">
+                    <a class="nav-link" th:classappend="${active == 'transactions'} ? ' active' : ''"
+                       th:href="@{/stock-transactions}">입고 이력</a>
+                </li>
+                <li class="nav-item" th:if="${session.role == 'HEADQUARTERS'}">
+                    <a class="nav-link" th:classappend="${active == 'disposed'} ? ' active' : ''"
+                       th:href="@{/inventory/disposed}">폐기 이력</a>
+                </li>
+                <li class="nav-item" th:if="${session.username != null}">
+                    <span class="role-chip" th:text="${session.role == 'HEADQUARTERS'} ? '본사' : '점주'">점주</span>
+                </li>
+                <li class="nav-item" th:if="${session.username != null}">
+                    <form class="logout-form" th:action="@{/logout}" method="post">
+                        <input type="hidden" name="_csrf" th:value="${csrfToken}">
+                        <button type="submit" class="nav-link nav-link-logout nav-button">로그아웃</button>
+                    </form>
+                </li>
+                <li class="nav-item" th:if="${session.username == null}">
+                    <a class="nav-link" th:href="@{/login}">로그인</a>
+                </li>
+                <li class="nav-item" th:if="${session.username == null}">
+                    <a class="nav-link" th:href="@{/signup}">회원가입</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<th:block th:fragment="scripts">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('로그인')}"></head>
+<body class="auth-page">
+<main class="auth-card">
+  <h1 class="auth-title">로그인</h1>
+  <p class="auth-subtitle">점주는 발주 요청을, 본사는 처리 대시보드를 확인합니다.</p>
+
+  <div th:if="${param.error}" class="alert alert-danger" role="alert">
+    사용자명 또는 비밀번호가 올바르지 않습니다.
+  </div>
+  <div th:if="${param.logout_success}" class="alert alert-success" role="alert">
+    로그아웃되었습니다.
+  </div>
+  <div th:if="${param.signup_success}" class="alert alert-success" role="alert">
+    회원가입이 완료되었습니다. 로그인해주세요.
+  </div>
+
+  <form name="loginForm" th:action="@{/login}" method="post" th:object="${userLoginRequest}">
+    <input type="hidden" name="_csrf" th:value="${csrfToken}" />
+
+    <div class="mb-3">
+      <label for="username" class="form-label">사용자명</label>
+      <input type="text" id="username" th:field="*{username}" class="form-control"
+             autocomplete="username" required aria-describedby="usernameError" />
+      <div id="usernameError" th:if="${#fields.hasErrors('username')}" class="field-error mt-1"
+           th:errors="*{username}">사용자명 오류</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="password" class="form-label">비밀번호</label>
+      <input type="password" id="password" th:field="*{password}" class="form-control"
+             autocomplete="current-password" required aria-describedby="passwordError" />
+      <div id="passwordError" th:if="${#fields.hasErrors('password')}" class="field-error mt-1"
+           th:errors="*{password}">비밀번호 오류</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">로그인</button>
+  </form>
+
+  <p class="text-center mt-3 mb-0">
+    점주 계정이 없나요?
+    <a th:href="@{/signup}">회원가입</a>
+  </p>
+  <p class="text-center text-muted mt-2 mb-0 small">
+    데모 본사 계정: hq_demo / pw123456
+  </p>
+</main>
+</body>
+</html>

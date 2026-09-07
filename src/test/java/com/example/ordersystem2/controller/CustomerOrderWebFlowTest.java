@@ -1,0 +1,202 @@
+package com.example.ordersystem2.controller;
+
+import com.example.ordersystem2.config.CsrfTokenService;
+import com.example.ordersystem2.dto.CustomerOrderCreateDTO;
+import com.example.ordersystem2.model.CustomerFulfillmentType;
+import com.example.ordersystem2.model.CustomerOrder;
+import com.example.ordersystem2.model.CustomerOrderStatus;
+import com.example.ordersystem2.model.Inventory;
+import com.example.ordersystem2.model.InventoryStatus;
+import com.example.ordersystem2.model.OrderType;
+import com.example.ordersystem2.model.User;
+import com.example.ordersystem2.model.UserRole;
+import com.example.ordersystem2.repository.CustomerOrderRepository;
+import com.example.ordersystem2.repository.InventoryRepository;
+import com.example.ordersystem2.repository.OrderTypeRepository;
+import com.example.ordersystem2.repository.UserRepository;
+import com.example.ordersystem2.service.CustomerOrderService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(properties = "spring.session.store-type=none")
+@AutoConfigureMockMvc(addFilters = false)
+@Transactional
+class CustomerOrderWebFlowTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private CsrfTokenService csrfTokenService;
+
+    @Autowired
+    private CustomerOrderService customerOrderService;
+
+    @Autowired
+    private CustomerOrderRepository customerOrderRepository;
+
+    @Autowired
+    private InventoryRepository inventoryRepository;
+
+    @Autowired
+    private OrderTypeRepository orderTypeRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Test
+    void publicShopShowsActiveInventoryAndFulfillmentChoices() throws Exception {
+        OrderType product = saveProduct("즉석커피");
+        saveInventory(product, 9);
+
+        mockMvc.perform(get("/shop"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("즉석커피")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("매장 픽업")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("배달")));
+    }
+
+    @Test
+    void publicCustomerOrderRequiresCsrfAndReservesInventory() throws Exception {
+        OrderType product = saveProduct("초코바");
+        Inventory inventory = saveInventory(product, 6);
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/shop")
+                        .session(session)
+                        .param("orderTypeId", product.getId().toString())
+                        .param("quantity", "2")
+                        .param("customerName", "김고객")
+                        .param("customerPhone", "010-9999-1111")
+                        .param("fulfillmentType", CustomerFulfillmentType.PICKUP.name()))
+                .andExpect(status().isForbidden());
+
+        String csrfToken = csrfTokenService.getOrCreateToken(session);
+        mockMvc.perform(post("/shop")
+                        .session(session)
+                        .param("_csrf", csrfToken)
+                        .param("orderTypeId", product.getId().toString())
+                        .param("quantity", "2")
+                        .param("customerName", "김고객")
+                        .param("customerPhone", "010-9999-1111")
+                        .param("fulfillmentType", CustomerFulfillmentType.PICKUP.name()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/shop?success=created"));
+
+        Inventory savedInventory = inventoryRepository.findById(inventory.getId()).orElseThrow();
+        CustomerOrder order = customerOrderRepository.findAll().get(0);
+        assertThat(savedInventory.getQuantity()).isEqualTo(4);
+        assertThat(order.getCustomerName()).isEqualTo("김고객");
+    }
+
+    @Test
+    void storeOwnerCanViewAndAdvanceCustomerOrders() throws Exception {
+        User storeOwner = saveUser("customerOpsOwner", UserRole.STORE_OWNER);
+        OrderType product = saveProduct("치킨샐러드");
+        saveInventory(product, 5);
+        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1));
+        MockHttpSession session = sessionFor(storeOwner);
+
+        mockMvc.perform(get("/customer-orders").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("치킨샐러드")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("주문 접수")));
+
+        String csrfToken = csrfTokenService.getOrCreateToken(session);
+        mockMvc.perform(post("/customer-orders/{id}/status", order.getId())
+                        .session(session)
+                        .param("_csrf", csrfToken)
+                        .param("status", CustomerOrderStatus.PREPARING.name()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/customer-orders?success=status_updated"));
+
+        CustomerOrder savedOrder = customerOrderRepository.findById(order.getId()).orElseThrow();
+        assertThat(savedOrder.getStatus()).isEqualTo(CustomerOrderStatus.PREPARING);
+    }
+
+    @Test
+    void anonymousUsersCannotOpenCustomerOrderOperations() throws Exception {
+        mockMvc.perform(get("/customer-orders"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void headquartersCannotOperateStoreCustomerOrders() throws Exception {
+        User headquarters = saveUser("customerOpsHeadquarters", UserRole.HEADQUARTERS);
+        OrderType product = saveProduct("본사 제한 상품");
+        saveInventory(product, 5);
+        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1));
+        MockHttpSession session = sessionFor(headquarters);
+
+        mockMvc.perform(get("/customer-orders").session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/home2"));
+
+        String csrfToken = csrfTokenService.getOrCreateToken(session);
+        mockMvc.perform(post("/customer-orders/{id}/status", order.getId())
+                        .session(session)
+                        .param("_csrf", csrfToken)
+                        .param("status", CustomerOrderStatus.PREPARING.name()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/home2"));
+
+        CustomerOrder savedOrder = customerOrderRepository.findById(order.getId()).orElseThrow();
+        assertThat(savedOrder.getStatus()).isEqualTo(CustomerOrderStatus.RECEIVED);
+    }
+
+    private MockHttpSession sessionFor(User user) {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("userId", user.getId());
+        session.setAttribute("username", user.getUsername());
+        session.setAttribute("role", user.getRole().name());
+        return session;
+    }
+
+    private User saveUser(String username, UserRole role) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword("encoded-password");
+        user.setRole(role);
+        return userRepository.save(user);
+    }
+
+    private OrderType saveProduct(String name) {
+        OrderType orderType = new OrderType();
+        orderType.setName(name);
+        return orderTypeRepository.save(orderType);
+    }
+
+    private Inventory saveInventory(OrderType product, int quantity) {
+        Inventory inventory = new Inventory();
+        inventory.setOrderType(product);
+        inventory.setQuantity(quantity);
+        inventory.setStatus(InventoryStatus.ACTIVE);
+        return inventoryRepository.save(inventory);
+    }
+
+    private CustomerOrderCreateDTO customerOrderRequest(OrderType product, int quantity) {
+        CustomerOrderCreateDTO request = new CustomerOrderCreateDTO();
+        request.setOrderTypeId(product.getId());
+        request.setQuantity(quantity);
+        request.setCustomerName("박고객");
+        request.setCustomerPhone("010-2222-3333");
+        request.setFulfillmentType(CustomerFulfillmentType.PICKUP);
+        request.setDeliveryAddress(Objects.toString(null, ""));
+        return request;
+    }
+}

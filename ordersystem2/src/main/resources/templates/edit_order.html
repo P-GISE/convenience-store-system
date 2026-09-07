@@ -1,0 +1,114 @@
+<!-- src/main/resources/templates/edit_order.html -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>발주 수정</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 40px;
+            margin-bottom: 40px;
+        }
+        .alert-success, .alert-danger {
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+
+    </style>
+    <script>
+        // 클라이언트 사이드 폼 유효성 검사 (필요 시)
+        function validateForm() {
+            // 현재 발주 수정 폼에는 추가적인 유효성 검사가 필요하지 않으므로 비워둡니다.
+            return true;
+        }
+    </script>
+</head>
+<body>
+<!-- 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" th:href="@{/}">재고 관리 시스템</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/inventory}">재고 확인</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/orders}">주문 관리</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/dashboard}">대시보드</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/stock-transactions}">발주 완료 내역</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/logout}">로그아웃</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- 메인 콘텐츠 -->
+<div class="container">
+    <h2 class="text-center mb-4">발주 수정</h2>
+
+    <!-- 오류 메시지 표시 -->
+    <div th:if="${param.error}" class="alert alert-danger" role="alert">
+        <p th:if="${param.error == 'order_not_found'}" th:text="'발주를 찾을 수 없습니다.'"></p>
+        <p th:if="${param.error == 'insufficient_inventory'}" th:text="'재고가 부족합니다.'"></p>
+        <p th:if="${param.error == 'unexpected_error'}" th:text="'예기치 않은 오류가 발생했습니다.'"></p>
+        <p th:if="${param.error != 'order_not_found' and param.error != 'insufficient_inventory' and param.error != 'unexpected_error'}" th:text="${param.error}"></p>
+    </div>
+
+    <!-- 발주 수정 폼 -->
+    <div class="form-container">
+        <form th:action="@{/orders/edit/{id}(id=${order.id})}" th:object="${orderUpdate}" method="post" onsubmit="return validateForm()">
+
+            <div class="mb-3">
+                <label for="orderTypeId" class="form-label">발주 종류:</label>
+                <select id="orderTypeId" th:field="*{orderTypeId}" class="form-select" required>
+                    <option value="" disabled selected>발주 종류 선택</option>
+                    <option th:each="type : ${orderTypes}"
+                            th:value="${type.id}"
+                            th:text="${type.name}">발주 종류</option>
+                </select>
+                <div th:if="${#fields.hasErrors('orderTypeId')}" class="text-danger mt-1" th:errors="*{orderTypeId}"></div>
+            </div>
+
+            <div class="mb-3">
+                <label for="quantity" class="form-label">수량:</label>
+                <input type="number" id="quantity" th:field="*{quantity}" min="1" class="form-control" required />
+                <div th:if="${#fields.hasErrors('quantity')}" class="text-danger mt-1" th:errors="*{quantity}"></div>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100">수정 완료</button>
+        </form>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

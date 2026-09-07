@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('작업 홈')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('home')}"></nav>
+
+<main class="app-shell landing-shell">
+  <section class="landing-panel">
+    <div>
+      <p class="page-kicker" th:text="${isHeadquarters} ? '본사 운영' : '점주 운영'">점주 운영</p>
+      <h1 class="landing-title">
+        <span th:text="${username}">사용자</span>님, 오늘의 재고 보충 업무를 시작하세요.
+      </h1>
+      <p class="landing-copy" th:if="${isStoreOwner}">
+        고객 주문을 처리하고, 재고 현황을 확인한 뒤 부족한 품목을 본사에 요청하세요.
+      </p>
+      <p class="landing-copy" th:if="${isHeadquarters}">
+        점주 요청을 처리 대시보드에서 확인하고 입고 완료까지 진행하세요. 처리 결과는 재고와 입고 이력에 반영됩니다.
+      </p>
+      <div class="landing-actions">
+        <a th:href="@{/customer-orders}" class="btn btn-primary" th:if="${isStoreOwner}">고객 주문 처리</a>
+        <a th:href="@{/orders}" class="btn btn-primary" th:text="${isHeadquarters} ? '발주 내역 보기' : '발주 요청하기'">발주 요청하기</a>
+        <a th:href="@{/dashboard}" class="btn btn-outline-primary" th:if="${isHeadquarters}">처리 대시보드</a>
+        <a th:href="@{/inventory}" class="btn btn-outline-primary">재고 현황</a>
+      </div>
+    </div>
+    <ul class="workflow-list" aria-label="주요 업무">
+      <li th:if="${isStoreOwner}"><strong>내 요청만 보기</strong><br>다른 점주의 요청은 표시되지 않습니다.</li>
+      <li th:if="${isStoreOwner}"><strong>처리 시작 후 잠금</strong><br>본사가 준비를 시작하면 요청을 수정할 수 없습니다.</li>
+      <li th:if="${isStoreOwner}"><strong>고객 주문 처리</strong><br>픽업과 배달 주문을 매장 상태로 관리합니다.</li>
+      <li th:if="${isHeadquarters}"><strong>순방향 상태 처리</strong><br>입고 완료된 요청은 이전 단계로 되돌릴 수 없습니다.</li>
+      <li th:if="${isHeadquarters}"><strong>입고 이력</strong><br>입고 완료와 폐기 처리를 이력으로 확인합니다.</li>
+    </ul>
+  </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

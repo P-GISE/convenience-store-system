@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('고객 주문')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('shop')}"></nav>
+
+<main class="app-shell">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">고객 주문</p>
+      <h1 class="page-title">온라인 주문</h1>
+      <p class="page-description">판매 가능한 재고 안에서 고객 주문을 받고, 매장 픽업 또는 배달로 처리합니다.</p>
+    </div>
+    <a th:href="@{/login}" class="btn btn-outline-primary" th:if="${session.username == null}">운영자 로그인</a>
+  </header>
+
+  <div th:if="${param.success}" class="alert alert-success" role="alert">
+    주문이 접수되었습니다. 연락처로 주문 상태를 다시 확인할 수 있습니다.
+  </div>
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}">오류</div>
+
+  <section class="shop-layout">
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">주문 가능 상품</h2>
+        <span class="text-muted small">재고가 있는 품목만 표시됩니다.</span>
+      </div>
+      <div class="panel-body">
+        <div class="catalog-grid" th:if="${!#lists.isEmpty(catalogItems)}">
+          <article class="catalog-item" th:each="inventory : ${catalogItems}">
+            <div>
+              <h3 th:text="${inventory.orderType.name}">삼각김밥</h3>
+              <p>현재 주문 가능</p>
+            </div>
+            <strong><span th:text="${inventory.quantity}">12</span>개</strong>
+          </article>
+        </div>
+        <div th:if="${#lists.isEmpty(catalogItems)}" class="empty-state">
+          <strong>현재 주문 가능한 상품이 없습니다.</strong>
+          매장 재고가 보충되면 주문할 수 있습니다.
+        </div>
+      </div>
+    </div>
+
+    <section class="panel order-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">주문 정보</h2>
+      </div>
+      <div class="panel-body">
+        <form th:action="@{/shop}" method="post" th:object="${customerOrderCreate}">
+          <input type="hidden" name="_csrf" th:value="${csrfToken}">
+
+          <div class="mb-3">
+            <label for="orderTypeId" class="form-label">상품</label>
+            <select id="orderTypeId" th:field="*{orderTypeId}" class="form-select" required>
+              <option value="">상품을 선택하세요</option>
+              <option th:each="inventory : ${catalogItems}"
+                      th:value="${inventory.orderType.id}"
+                      th:text="${inventory.orderType.name + ' / 재고 ' + inventory.quantity + '개'}">삼각김밥</option>
+            </select>
+            <div class="field-error" th:if="${#fields.hasErrors('orderTypeId')}" th:errors="*{orderTypeId}">오류</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="quantity" class="form-label">수량</label>
+            <input type="number" id="quantity" th:field="*{quantity}" class="form-control" min="1" required>
+            <div class="field-error" th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}">오류</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="customerName" class="form-label">이름</label>
+            <input type="text" id="customerName" th:field="*{customerName}" class="form-control" required>
+            <div class="field-error" th:if="${#fields.hasErrors('customerName')}" th:errors="*{customerName}">오류</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="customerPhone" class="form-label">연락처</label>
+            <input type="text" id="customerPhone" th:field="*{customerPhone}" class="form-control" required>
+            <div class="field-error" th:if="${#fields.hasErrors('customerPhone')}" th:errors="*{customerPhone}">오류</div>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label">수령 방식</legend>
+            <div class="fulfillment-grid">
+              <label class="method-card" th:each="type : ${fulfillmentTypes}">
+                <input type="radio" th:field="*{fulfillmentType}" th:value="${type.name()}" required>
+                <span th:text="${type.displayName}">매장 픽업</span>
+              </label>
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('fulfillmentType')}" th:errors="*{fulfillmentType}">오류</div>
+          </fieldset>
+
+          <div class="mb-3">
+            <label for="deliveryAddress" class="form-label">배달 주소</label>
+            <input type="text" id="deliveryAddress" th:field="*{deliveryAddress}" class="form-control"
+                   placeholder="배달 주문일 때 입력">
+            <div class="field-error" th:if="${#fields.hasErrors('deliveryAddress')}" th:errors="*{deliveryAddress}">오류</div>
+          </div>
+
+          <div class="mb-4">
+            <label for="requestMemo" class="form-label">요청사항</label>
+            <textarea id="requestMemo" th:field="*{requestMemo}" class="form-control" rows="3"></textarea>
+            <div class="field-error" th:if="${#fields.hasErrors('requestMemo')}" th:errors="*{requestMemo}">오류</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100" th:disabled="${#lists.isEmpty(catalogItems)}">주문 접수</button>
+        </form>
+      </div>
+    </section>
+  </section>
+
+  <section class="panel form-panel">
+    <div class="panel-header">
+      <h2 class="panel-title">주문 조회</h2>
+      <span class="text-muted small">연락처가 정확히 일치하는 주문을 표시합니다.</span>
+    </div>
+    <div class="panel-body">
+      <form th:action="@{/shop}" method="get" class="lookup-row">
+        <input type="text" name="phone" class="form-control" placeholder="010-1234-5678" th:value="${lookupPhone}">
+        <button type="submit" class="btn btn-outline-primary">조회</button>
+      </form>
+      <div class="table-scroll mt-3" th:if="${!#lists.isEmpty(lookupOrders)}">
+        <table class="table app-table responsive-stack">
+          <caption>고객 주문 조회 결과</caption>
+          <thead>
+          <tr>
+            <th scope="col">주문 ID</th>
+            <th scope="col">상품</th>
+            <th scope="col" class="number-cell">수량</th>
+            <th scope="col">수령</th>
+            <th scope="col">상태</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="order : ${lookupOrders}">
+            <th scope="row" data-label="주문 ID" th:text="${order.id}">1</th>
+            <td data-label="상품" th:text="${order.orderType.name}">삼각김밥</td>
+            <td data-label="수량" class="number-cell"><span th:text="${order.quantity}">1</span>개</td>
+            <td data-label="수령" th:text="${order.fulfillmentType.displayName}">매장 픽업</td>
+            <td data-label="상태"><span class="status-badge" th:classappend="' status-customer-' + ${order.status.name().toLowerCase()}" th:text="${order.status.displayName}">주문 접수</span></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

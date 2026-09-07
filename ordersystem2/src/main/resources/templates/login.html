@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인</title>
+  <style>
+    /* 전체 페이지 스타일링 */
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f8f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    /* 로그인 폼 스타일링 */
+    form {
+        max-width: 400px;
+        width: 100%;
+        padding: 20px;
+        border: 1px solid #ddd;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #007bff;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    input {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    button {
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    button:hover {
+        background-color: #0056b3;
+    }
+    button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    .error-message {
+        color: red;
+        margin-top: 10px;
+        text-align: center;
+        display: none;
+    }
+    /* 유효성 검사 오류 메시지 스타일링 */
+    .field-error {
+        color: red;
+        font-size: 0.9em;
+        margin-top: -10px;
+        margin-bottom: 10px;
+    }
+    /* 회원가입 링크 스타일링 */
+    .signup-link {
+        text-align: center;
+        margin-top: 15px;
+    }
+    .signup-link a {
+        color: #007bff;
+        text-decoration: none;
+    }
+    .signup-link a:hover {
+        text-decoration: underline;
+    }
+  </style>
+  <script>
+    // 클라이언트 사이드 폼 유효성 검사
+    function validateLoginForm() {
+        const username = document.forms["loginForm"]["username"].value.trim();
+        const password = document.forms["loginForm"]["password"].value.trim();
+        let isValid = true;
+        let errorMessage = "";
+
+        if (username === "" || password === "") {
+            errorMessage = "사용자명과 비밀번호를 입력해주세요.";
+            isValid = false;
+        }
+
+        const errorDiv = document.getElementById("errorMessage");
+        if (!isValid) {
+            errorDiv.textContent = errorMessage;
+            errorDiv.style.display = "block";
+        } else {
+            errorDiv.style.display = "none";
+        }
+
+        return isValid;
+    }
+  </script>
+</head>
+<body>
+<form name="loginForm" th:action="@{/login}" method="post" th:object="${userLoginRequest}" onsubmit="return validateLoginForm()">
+  <h2>로그인</h2>
+
+  <!-- 클라이언트 사이드 에러 메시지 -->
+  <div id="errorMessage" class="error-message" th:if="${param.error}">
+    로그인 실패! 사용자명과 비밀번호를 확인하세요.
+  </div>
+
+  <!-- 서버 사이드 유효성 검사 에러 메시지 -->
+  <div th:if="${#fields.hasErrors('username')}" class="field-error" th:errors="*{username}">사용자명 오류</div>
+  <div th:if="${#fields.hasErrors('password')}" class="field-error" th:errors="*{password}">비밀번호 오류</div>
+
+  <div>
+    <label for="username">사용자 이름</label>
+    <input type="text" id="username" name="username" th:field="*{username}" required />
+  </div>
+
+  <div>
+    <label for="password">비밀번호</label>
+    <input type="password" id="password" name="password" th:field="*{password}" required />
+  </div>
+
+  <button type="submit" id="loginButton">로그인</button>
+
+  <!-- 서버 사이드 에러 메시지 -->
+  <div th:if="${param.error}" class="error-message">
+    로그인 실패! 사용자명과 비밀번호를 확인하세요.
+  </div>
+  <div th:if="${param.logout_success}" class="error-message" style="color: green;">
+    로그아웃 되었습니다.
+  </div>
+  <div th:if="${param.signup_success}" class="error-message" style="color: green;">
+    회원가입이 완료되었습니다. 로그인 해주세요.
+  </div>
+
+  <div class="signup-link">
+    <a th:href="@{/signup}">회원가입</a>
+  </div>
+</form>
+</body>
+</html>

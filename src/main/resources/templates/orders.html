@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('발주 요청')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('orders')}"></nav>
+
+<main class="app-shell">
+    <header class="page-header">
+        <div>
+            <p class="page-kicker" th:text="${isStoreOwner} ? '점주 운영' : '본사 조회'">점주 운영</p>
+            <h1 class="page-title" th:text="${isStoreOwner} ? '발주 요청' : '발주 내역'">발주 요청</h1>
+            <p class="page-description" th:if="${isStoreOwner}">
+                부족한 재고를 본사에 요청하고 처리 상태를 확인합니다. 본사 처리가 시작되면 요청을 수정할 수 없습니다.
+            </p>
+            <p class="page-description" th:if="${isHeadquarters}">
+                전체 점주의 발주 요청을 확인합니다. 상태 처리는 처리 대시보드에서 진행합니다.
+            </p>
+        </div>
+    </header>
+
+    <div th:if="${param.success}" class="alert alert-success" role="alert">
+        <span th:if="${param.success[0] == 'request_updated'}">발주 요청이 수정되었습니다.</span>
+        <span th:if="${param.success[0] != 'request_updated'}">발주 요청이 생성되었습니다.</span>
+    </div>
+    <div th:if="${param.error}" class="alert alert-danger" role="alert">
+        <span th:if="${param.error[0] == 'order_locked'}">본사 처리가 시작된 요청은 수정할 수 없습니다.</span>
+        <span th:if="${param.error[0] == 'unexpected_error'}">처리 중 오류가 발생했습니다. 다시 시도해주세요.</span>
+        <span th:if="${param.error[0] != 'order_locked' and param.error[0] != 'unexpected_error'}" th:text="${param.error[0]}">오류</span>
+    </div>
+
+    <section class="panel table-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">요청 목록</h2>
+            <span class="text-muted small" th:text="${isStoreOwner} ? '내가 요청한 발주만 표시됩니다.' : '모든 점주의 요청이 표시됩니다.'">요청 목록</span>
+        </div>
+        <div class="table-scroll">
+            <table class="table app-table responsive-stack">
+                <caption>발주 요청 목록</caption>
+                <thead>
+                <tr>
+                    <th scope="col">요청 ID</th>
+                    <th scope="col" th:if="${isHeadquarters}">요청자</th>
+                    <th scope="col">품목</th>
+                    <th scope="col" class="number-cell">요청 수량</th>
+                    <th scope="col">요청일</th>
+                    <th scope="col">상태</th>
+                    <th scope="col" th:if="${isStoreOwner}">수정</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="order : ${orders}">
+                    <th scope="row" data-label="요청 ID" th:text="${order.id}">1</th>
+                    <td th:if="${isHeadquarters}" data-label="요청자" th:text="${order.requester != null ? order.requester.username : '미기록'}">store_demo</td>
+                    <td data-label="품목" th:text="${order.orderType.name}">삼각김밥</td>
+                    <td data-label="요청 수량" class="number-cell"><span th:text="${order.quantity}">10</span>개</td>
+                    <td data-label="요청일" class="date-cell" th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2026-08-02 10:00</td>
+                    <td data-label="상태">
+                        <span class="status-badge"
+                              th:classappend="${order.status.name() == 'RECEIVED'} ? ' status-received' : (${order.status.name() == 'PREPARATION'} ? ' status-preparation' : (${order.status.name() == 'DEPARTED'} ? ' status-departed' : ' status-arrived'))"
+                              th:text="${order.status.displayName}">요청 접수</span>
+                    </td>
+                    <td th:if="${isStoreOwner}" data-label="수정" class="action-cell">
+                        <a th:if="${order.status.canStoreOwnerEdit()}" th:href="@{/orders/edit/{id}(id=${order.id})}"
+                           class="btn btn-outline-primary btn-sm">수정</a>
+                        <span th:if="${!order.status.canStoreOwnerEdit()}" class="text-muted small"
+                              th:text="${order.status.terminal} ? '처리 완료' : '처리 중'">처리 중</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(orders)}">
+                    <td th:colspan="${isHeadquarters} ? 6 : 6" class="empty-state">
+                        <strong>발주 요청이 없습니다.</strong>
+                        <span th:if="${isStoreOwner}">아래 폼에서 첫 요청을 등록하세요.</span>
+                        <span th:if="${isHeadquarters}">점주가 발주 요청을 만들면 이곳에 표시됩니다.</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel form-panel" th:if="${isStoreOwner}">
+        <div class="panel-header">
+            <h2 class="panel-title">새 발주 요청</h2>
+        </div>
+        <div class="panel-body">
+            <form th:action="@{/orders}" method="post" th:object="${orderCreate}">
+                <input type="hidden" name="_csrf" th:value="${csrfToken}" />
+                <div class="mb-3">
+                    <label for="orderTypeId" class="form-label">품목</label>
+                    <select id="orderTypeId" th:field="*{orderTypeId}" class="form-select" required aria-describedby="orderTypeHelp orderTypeError">
+                        <option value="" disabled selected>품목 선택</option>
+                        <option th:each="type : ${orderTypes}" th:value="${type.id}" th:text="${type.name}">품목</option>
+                    </select>
+                    <div id="orderTypeHelp" class="form-text">본사에 보충을 요청할 품목입니다.</div>
+                    <div id="orderTypeError" th:if="${#fields.hasErrors('orderTypeId')}" class="field-error mt-1" th:errors="*{orderTypeId}">품목 오류</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">요청 수량</label>
+                    <input type="number" id="quantity" th:field="*{quantity}" min="1" class="form-control" required
+                           aria-describedby="quantityHelp quantityError" />
+                    <div id="quantityHelp" class="form-text">1개 이상 입력하세요. 입고 완료 시 재고에 반영됩니다.</div>
+                    <div id="quantityError" th:if="${#fields.hasErrors('quantity')}" class="field-error mt-1" th:errors="*{quantity}">수량 오류</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">본사에 요청하기</button>
+            </form>
+        </div>
+    </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

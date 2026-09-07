@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('폐기 이력')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('disposed')}"></nav>
+
+<main class="app-shell">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">본사 운영</p>
+      <h1 class="page-title">폐기 이력</h1>
+      <p class="page-description">폐기 처리된 입고 건을 확인합니다.</p>
+    </div>
+  </header>
+
+  <div th:if="${param.success}" class="alert alert-success" role="alert">
+    재고가 폐기 처리되었습니다.
+  </div>
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}">오류</div>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2 class="panel-title">폐기된 입고 건</h2>
+      <a th:href="@{/stock-transactions}" class="btn btn-outline-primary btn-sm">입고 이력으로 돌아가기</a>
+    </div>
+    <div class="table-scroll">
+      <table class="table app-table responsive-stack">
+        <caption>폐기 이력 목록</caption>
+        <thead>
+        <tr>
+          <th scope="col">품목</th>
+          <th scope="col" class="number-cell">수량</th>
+          <th scope="col">폐기 시간</th>
+          <th scope="col">상태</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="transaction : ${disposedTransactions}">
+          <th scope="row" data-label="품목" th:text="${transaction.orderType.name}">품목</th>
+          <td data-label="수량" class="number-cell"><span th:text="${transaction.quantity}">100</span>개</td>
+          <td data-label="폐기 시간" class="date-cell" th:text="${transaction.disposeTime != null ? #temporals.format(transaction.disposeTime, 'yyyy-MM-dd HH:mm') : '-'}">2026-08-02 10:00</td>
+          <td data-label="상태"><span class="status-badge status-disposed">폐기 완료</span></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(disposedTransactions)}">
+          <td colspan="4" class="empty-state">
+            <strong>폐기 이력이 없습니다.</strong>
+            입고 이력에서 폐기 처리하면 이곳에 기록됩니다.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

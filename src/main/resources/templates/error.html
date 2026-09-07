@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('오류')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('home')}"></nav>
+
+<main class="app-shell app-shell-narrow">
+    <section class="panel">
+        <div class="panel-header">
+            <h1 class="panel-title">요청을 처리하지 못했습니다</h1>
+        </div>
+        <div class="panel-body">
+            <p class="page-description">화면을 새로고침하거나 이전 화면에서 다시 시도해주세요.</p>
+            <div class="d-flex gap-2 mt-3">
+                <a th:href="@{/home2}" class="btn btn-primary">작업 홈</a>
+                <a th:href="@{/}" class="btn btn-outline-primary">처음으로</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('고객 주문 처리')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('customer-orders')}"></nav>
+
+<main class="app-shell">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">매장 주문 운영</p>
+      <h1 class="page-title">고객 주문 처리</h1>
+      <p class="page-description">온라인으로 접수된 픽업/배달 주문을 확인하고 매장 처리 상태를 업데이트합니다.</p>
+    </div>
+    <a th:href="@{/shop}" class="btn btn-outline-primary">고객 주문 화면</a>
+  </header>
+
+  <div th:if="${param.success}" class="alert alert-success" role="alert">
+    고객 주문 상태가 업데이트되었습니다.
+  </div>
+  <div th:if="${param.error}" class="alert alert-danger" role="alert">
+    <span th:if="${param.error[0] == 'invalid_status_transition'}">픽업/배달 흐름에 맞는 다음 상태만 선택할 수 있습니다.</span>
+    <span th:if="${param.error[0] == 'unexpected_error'}">처리 중 오류가 발생했습니다. 다시 시도해주세요.</span>
+  </div>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2 class="panel-title">전체 고객 주문</h2>
+      <span class="text-muted small">취소 시 예약된 재고가 복원됩니다.</span>
+    </div>
+    <div class="table-scroll">
+      <table class="table app-table responsive-stack">
+        <caption>고객 주문 목록</caption>
+        <thead>
+        <tr>
+          <th scope="col">주문 ID</th>
+          <th scope="col">고객</th>
+          <th scope="col">연락처</th>
+          <th scope="col">상품</th>
+          <th scope="col" class="number-cell">수량</th>
+          <th scope="col">수령</th>
+          <th scope="col">상태</th>
+          <th scope="col">상태 변경</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${customerOrders}">
+          <th scope="row" data-label="주문 ID" th:text="${order.id}">1</th>
+          <td data-label="고객" th:text="${order.customerName}">김고객</td>
+          <td data-label="연락처" th:text="${order.customerPhone}">010-0000-0000</td>
+          <td data-label="상품" th:text="${order.orderType.name}">삼각김밥</td>
+          <td data-label="수량" class="number-cell"><span th:text="${order.quantity}">1</span>개</td>
+          <td data-label="수령" th:text="${order.fulfillmentType.displayName}">매장 픽업</td>
+          <td data-label="상태">
+            <span class="status-badge"
+                  th:classappend="' status-customer-' + ${order.status.name().toLowerCase()}"
+                  th:text="${order.status.displayName}">주문 접수</span>
+          </td>
+          <td data-label="상태 변경" class="action-cell">
+            <form th:if="${!order.status.terminal}" th:action="@{/customer-orders/{id}/status(id=${order.id})}" method="post" class="action-row">
+              <input type="hidden" name="_csrf" th:value="${csrfToken}">
+              <select name="status" class="form-select form-select-sm" required>
+                <option th:each="status : ${statuses}"
+                        th:value="${status.name()}"
+                        th:text="${status.displayName}"
+                        th:selected="${status == order.status}"
+                        th:disabled="${!order.status.canTransitionTo(status, order.fulfillmentType)}">주문 접수</option>
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">변경</button>
+            </form>
+            <span th:if="${order.status.terminal}" class="text-muted small">처리 완료</span>
+          </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(customerOrders)}">
+          <td colspan="8" class="empty-state">
+            <strong>고객 주문이 없습니다.</strong>
+            고객 주문 화면에서 주문이 접수되면 이곳에 표시됩니다.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

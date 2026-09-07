@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('처리 대시보드')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('dashboard')}"></nav>
+
+<main class="app-shell">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">본사 운영</p>
+      <h1 class="page-title">처리 대시보드</h1>
+      <p class="page-description">점주가 요청한 재고를 접수, 준비, 출고, 입고 완료 순서로 처리합니다.</p>
+    </div>
+  </header>
+
+  <div th:if="${param.success}" class="alert alert-success" role="alert">
+    요청 상태가 업데이트되었습니다.
+  </div>
+  <div th:if="${param.error}" class="alert alert-danger" role="alert">
+    <span th:if="${param.error[0] == 'invalid_status_transition'}">상태는 이전 단계로 되돌리거나 단계를 건너뛸 수 없습니다.</span>
+    <span th:if="${param.error[0] == 'inventory_not_found'}">해당 품목의 재고를 찾을 수 없습니다.</span>
+    <span th:if="${param.error[0] == 'unexpected_error'}">처리 중 오류가 발생했습니다. 다시 시도해주세요.</span>
+  </div>
+
+  <section class="stat-grid" aria-label="상태별 요청 수">
+    <div class="stat-card received">
+      <p class="stat-label">요청 접수</p>
+      <p class="stat-value" th:text="${receivedCount}">0</p>
+    </div>
+    <div class="stat-card preparation">
+      <p class="stat-label">본사 준비</p>
+      <p class="stat-value" th:text="${preparationCount}">0</p>
+    </div>
+    <div class="stat-card departed">
+      <p class="stat-label">출고</p>
+      <p class="stat-value" th:text="${departedCount}">0</p>
+    </div>
+    <div class="stat-card arrived">
+      <p class="stat-label">입고 완료</p>
+      <p class="stat-value" th:text="${arrivedCount}">0</p>
+    </div>
+  </section>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2 class="panel-title">전체 발주 요청</h2>
+      <span class="text-muted small">상태 전이는 한 단계씩 순방향만 가능합니다.</span>
+    </div>
+    <div class="table-scroll">
+      <table class="table app-table responsive-stack">
+        <caption>본사 처리 대상 발주 요청 목록</caption>
+        <thead>
+        <tr>
+          <th scope="col">요청 ID</th>
+          <th scope="col">요청자</th>
+          <th scope="col">품목</th>
+          <th scope="col" class="number-cell">요청 수량</th>
+          <th scope="col">요청일</th>
+          <th scope="col">상태</th>
+          <th scope="col">상태 변경</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orders}">
+          <th scope="row" data-label="요청 ID" th:text="${order.id}">1</th>
+          <td data-label="요청자" th:text="${order.requester != null ? order.requester.username : '미기록'}">store_demo</td>
+          <td data-label="품목" th:text="${order.orderType.name}">삼각김밥</td>
+          <td data-label="요청 수량" class="number-cell"><span th:text="${order.quantity}">7</span>개</td>
+          <td data-label="요청일" class="date-cell" th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2026-08-02 10:00</td>
+          <td data-label="상태">
+            <span class="status-badge"
+                  th:classappend="${order.status.name() == 'RECEIVED'} ? ' status-received' : (${order.status.name() == 'PREPARATION'} ? ' status-preparation' : (${order.status.name() == 'DEPARTED'} ? ' status-departed' : ' status-arrived'))"
+                  th:text="${order.status.displayName}">요청 접수</span>
+          </td>
+          <td data-label="상태 변경" class="action-cell">
+            <form th:if="${!order.status.terminal}" th:action="@{/dashboard/updateStatus}" method="post" class="action-row">
+              <input type="hidden" name="orderId" th:value="${order.id}" />
+              <input type="hidden" name="_csrf" th:value="${csrfToken}" />
+              <select name="status" class="form-select form-select-sm" required th:aria-label="'요청 ' + ${order.id} + ' 상태 변경'">
+                <option th:each="status : ${statuses}"
+                        th:value="${status.name()}"
+                        th:text="${status.displayName}"
+                        th:selected="${status == order.status}"
+                        th:disabled="${!order.status.canTransitionTo(status)}">요청 접수</option>
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">변경</button>
+            </form>
+            <span th:if="${order.status.terminal}" class="text-muted small">처리 완료</span>
+          </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(orders)}">
+          <td colspan="7" class="empty-state">
+            <strong>처리할 요청이 없습니다.</strong>
+            점주가 발주 요청을 만들면 이곳에 표시됩니다.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

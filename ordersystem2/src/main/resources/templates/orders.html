@@ -1,0 +1,125 @@
+<!-- src/main/resources/templates/orders.html -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>주문 관리</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 40px; margin-bottom: 40px; }
+        .table-container { overflow-x: auto; }
+        .navbar-brand { font-weight: bold; }
+    </style>
+</head>
+<body>
+<!-- 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" th:href="@{/}">재고 관리 시스템</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/inventory}">재고 확인</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/orders}">주문 관리</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/dashboard}">대시보드</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/stock-transactions}">발주 완료 내역</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/logout}">로그아웃</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- 메인 콘텐츠 -->
+<div class="container">
+    <h2 class="text-center mb-4">주문 관리</h2>
+
+    <!-- 성공 메시지 표시 -->
+    <div th:if="${param.success}" class="alert alert-success" role="alert">
+        주문이 성공적으로 생성되었습니다.
+    </div>
+
+    <!-- 오류 메시지 표시 -->
+    <div th:if="${param.error}" class="alert alert-danger" role="alert">
+        <p th:text="${param.error == 'insufficient_inventory' ? '재고가 부족합니다.' : (param.error == 'unexpected_error' ? '예기치 않은 오류가 발생했습니다.' : param.error)}"></p>
+    </div>
+
+    <!-- 주문 목록 테이블 -->
+    <div class="table-container">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>주문 ID</th>
+                <th>발주 종류</th>
+                <th>수량</th>
+                <th>주문 날짜</th>
+                <th>수정</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${orders}">
+                <td th:text="${order.id}">1</td>
+                <td th:text="${order.orderType.name}">종류</td>
+                <td th:text="${order.quantity}">10</td>
+                <td th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm:ss')}">2023-10-07</td>
+                <td>
+                    <a th:href="@{/orders/edit/{id}(id=${order.id})}" class="btn btn-warning btn-sm">수정</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 주문 생성 폼 -->
+    <div class="card mt-4">
+        <div class="card-header">
+            발주하기
+        </div>
+        <div class="card-body">
+            <form th:action="@{/orders}" method="post" th:object="${orderCreate}">
+
+                <div class="mb-3">
+                    <label for="orderTypeId" class="form-label">발주 종류:</label>
+                    <select id="orderTypeId" th:field="*{orderTypeId}" class="form-select" required>
+                        <option value="" disabled selected>발주 종류 선택</option>
+                        <option th:each="type : ${orderTypes}"
+                                th:value="${type.id}"
+                                th:text="${type.name}">발주 종류</option>
+                    </select>
+                    <div th:if="${#fields.hasErrors('orderTypeId')}" class="text-danger">
+                        <p th:errors="*{orderTypeId}">발주 종류 오류</p>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">수량:</label>
+                    <input type="number" id="quantity" th:field="*{quantity}" min="1" class="form-control" required />
+                    <div th:if="${#fields.hasErrors('quantity')}" class="text-danger">
+                        <p th:errors="*{quantity}">수량 오류</p>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">발주하기</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

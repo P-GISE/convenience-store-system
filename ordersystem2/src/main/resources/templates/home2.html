@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order System</title>
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f8f8;
+    }
+    header {
+        background-color: #007bff;
+        color: white;
+        padding: 1em;
+        text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+    nav {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    nav a {
+        margin: 0 10px;
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        padding: 5px 10px;
+    }
+    nav a:hover, nav a.active {
+        background-color: #0056b3;
+        border-radius: 5px;
+    }
+    main {
+        padding: 20px;
+        text-align: center;
+    }
+    footer {
+        text-align: center;
+        padding: 10px;
+        background-color: #f1f1f1;
+        color: #333;
+        position: relative;
+        bottom: 0;
+        width: 100%;
+    }
+    /* 모바일 반응형 */
+    @media (max-width: 600px) {
+        nav {
+            flex-direction: column;
+            align-items: center;
+        }
+        nav a {
+            margin: 5px 0;
+        }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Order System</h1>
+  <nav>
+    <!-- 로그인하지 않은 사용자에게 표시 -->
+    <a th:href="@{/login}" th:if="${username == null}" aria-label="로그인">로그인</a>
+
+    <!-- 로그인한 사용자에게 표시 -->
+    <a th:href="@{/orders}" th:if="${username != null}" aria-label="발주 관리">발주 관리</a>
+    <a th:href="@{/inventory}" th:if="${username != null}" aria-label="재고 확인">재고 확인</a>
+
+    <!-- 관리자에게만 표시 -->
+    <a th:href="@{/dashboard}" th:if="${username != null}" aria-label="관리자 대시보드">대시보드</a>
+
+    <a th:href="@{/stock-transactions}" th:if="${username != null}" aria-label="발주 확인 내역">발주 확인 내역</a>
+    <!-- 로그인한 사용자에게만 표시 -->
+    <a th:href="@{/logout}" th:if="${username != null}" aria-label="로그아웃">로그아웃</a>
+
+
+  </nav>
+</header>
+<main>
+  <div th:if="${username != null}">
+    <p>환영합니다, <strong th:text="${username}">사용자</strong>님!</p>
+  </div>
+  <div th:if="${username == null}">
+    <p>편의점 발주 시스템입니다. 원하는 작업을 선택하세요.</p>
+  </div>
+</main>
+<footer>
+  <p>&copy; 2024 Order System</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!-- src/main/resources/templates/inventory_add.html -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>재고 추가</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f0f2f5;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    .navbar-brand {
+        font-weight: bold;
+        font-size: 1.5rem;
+    }
+
+    .container {
+        flex: 1;
+        padding: 40px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h2 {
+        color: #333333;
+        margin-bottom: 20px;
+    }
+
+    .form-container {
+        width: 100%;
+        max-width: 600px;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-back {
+        margin-top: 20px;
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 600px) {
+        .navbar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .navbar a {
+            margin: 5px 0 0 0;
+        }
+
+        .container {
+            padding: 20px 10px;
+        }
+
+        .form-container {
+            padding: 20px;
+        }
+    }
+  </style>
+</head>
+<body>
+<!-- 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" th:href="@{/}">재고 관리 시스템</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/inventory}">재고 확인</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/orders}">주문 관리</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/dashboard}">대시보드</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/stock-transactions}">발주 완료 내역</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:href="@{/logout}">로그아웃</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- 콘텐츠 컨테이너 -->
+<div class="container">
+  <h2>재고 추가</h2>
+
+  <!-- 피드백 메시지 표시 -->
+  <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+  <div class="form-container">
+    <form th:action="@{/inventory/add}" method="post">
+
+      <div class="mb-3">
+        <label for="orderType" class="form-label">발주 종류</label>
+        <select class="form-select" id="orderType" name="orderTypeId" required>
+          <option value="" disabled selected>발주 종류 선택</option>
+          <option th:each="type : ${orderTypes}" th:value="${type.id}" th:text="${type.name}">종류</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="quantity" class="form-label">재고 수량</label>
+        <input type="number" class="form-control" id="quantity" name="quantity" min="0" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary">추가</button>
+    </form>
+  </div>
+
+  <a th:href="@{/inventory}" class="btn btn-secondary btn-back">재고 목록으로 돌아가기</a>
+</div>
+
+<!-- Bootstrap JS 및 종속성 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
