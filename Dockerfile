@@ -6,6 +6,8 @@ COPY src ./src
 RUN bash gradlew --no-daemon bootJar
 
 FROM eclipse-temurin:21-jre-jammy
+ARG REVISION_SHA
+LABEL org.opencontainers.image.revision=$REVISION_SHA
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 app
 WORKDIR /app

@@ -31,7 +31,7 @@ jobs:
             exit 1
           fi
       - name: Build image
-        run: docker compose -f compose.production.yaml build
+        run: docker compose -f compose.production.yaml build --build-arg REVISION_SHA="$GITHUB_SHA"
       - name: Synthetic MySQL runtime regression
         run: bash scripts/deployment-smoke.sh
       - name: Capture container logs
@@ -50,3 +50,21 @@ jobs:
       - name: Remove only this CI database
         if: always()
         run: docker compose -f compose.production.yaml down -v
+      - name: Package verified immutable image
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          test "$(docker image inspect convenience-store:ci --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$GITHUB_SHA"
+          docker tag convenience-store:ci convenience-store:$GITHUB_SHA
+          mkdir -p release
+          docker save convenience-store:$GITHUB_SHA | gzip > release/image.tar.gz
+          (cd release && sha256sum image.tar.gz > image.sha256)
+          echo "$GITHUB_SHA" > release/revision.txt
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push'
+        with:
+          name: five-sites-app-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
