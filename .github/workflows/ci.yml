@@ -1,0 +1,52 @@
+name: Build and synthetic deployment check
+on:
+  pull_request:
+  push:
+    branches: [main, codex/deployment-prep-20261024]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      IMAGE_TAG: ci
+      APP_PORT: '18083'
+      DB_PASSWORD: synthetic-app-password
+      MYSQL_ROOT_PASSWORD: synthetic-root-password
+      COMPOSE_PROJECT_NAME: convenience-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Tests and JAR
+        run: bash gradlew --no-daemon test bootJar
+      - name: Required environment fails closed
+        run: |
+          if env -u DB_PASSWORD docker compose -f compose.production.yaml config -q; then
+            echo 'Missing database secret was accepted' >&2
+            exit 1
+          fi
+      - name: Build image
+        run: docker compose -f compose.production.yaml build
+      - name: Synthetic MySQL runtime regression
+        run: bash scripts/deployment-smoke.sh
+      - name: Capture container logs
+        if: always()
+        run: |
+          mkdir -p build/deployment-evidence
+          docker compose -f compose.production.yaml logs --no-color > build/deployment-evidence/containers.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-evidence
+          path: |
+            build/test-results
+            build/reports/tests
+            build/deployment-evidence
+      - name: Remove only this CI database
+        if: always()
+        run: docker compose -f compose.production.yaml down -v

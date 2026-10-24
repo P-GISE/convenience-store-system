@@ -39,6 +39,7 @@ out/
 # Local/private files
 .env
 .env.*
+!.env.production.example
 *.log
 *.pid
 .codex-artifacts/
