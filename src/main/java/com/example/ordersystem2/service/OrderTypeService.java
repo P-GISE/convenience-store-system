@@ -23,6 +23,10 @@ public class OrderTypeService {
         return orderTypeRepository.findAll();
     }
 
+    public List<OrderType> getStoreOrderTypes(Long storeOwnerId) {
+        return orderTypeRepository.findByStoreOwnerId(storeOwnerId);
+    }
+
     /**
      * 특정 발주 종류를 ID로 조회합니다.
      * @param id 발주 종류 ID

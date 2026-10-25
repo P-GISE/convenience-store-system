@@ -15,6 +15,11 @@ import com.example.ordersystem2.repository.CustomerOrderRepository;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
 import org.springframework.stereotype.Service;
+import com.example.ordersystem2.model.User;
+import com.example.ordersystem2.model.UserRole;
+import com.example.ordersystem2.repository.UserRepository;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -25,36 +30,48 @@ public class CustomerOrderService {
     private final CustomerOrderRepository customerOrderRepository;
     private final InventoryRepository inventoryRepository;
     private final OrderTypeRepository orderTypeRepository;
+    private final UserRepository users;
 
     public CustomerOrderService(CustomerOrderRepository customerOrderRepository,
                                 InventoryRepository inventoryRepository,
-                                OrderTypeRepository orderTypeRepository) {
+                                OrderTypeRepository orderTypeRepository, UserRepository users) {
         this.customerOrderRepository = customerOrderRepository;
         this.inventoryRepository = inventoryRepository;
         this.orderTypeRepository = orderTypeRepository;
+        this.users = users;
     }
 
+    @Transactional(readOnly = true)
     public List<Inventory> getAvailableCatalogItems() {
         return inventoryRepository.findByStatus(InventoryStatus.ACTIVE).stream()
+                .filter(inventory -> inventory.getOrderType().getStoreOwner() != null
+                        && inventory.getOrderType().getStoreOwner().getRole() == UserRole.STORE_OWNER)
                 .filter(inventory -> inventory.getQuantity() != null && inventory.getQuantity() > 0)
                 .toList();
     }
 
-    public List<CustomerOrder> getAllOrders() {
-        return customerOrderRepository.findAllByOrderByCreatedAtDesc();
+    public List<CustomerOrder> getStoreOrders(Long storeOwnerId) {
+        requireRole(storeOwnerId, UserRole.STORE_OWNER);
+        return customerOrderRepository.findByStoreOwnerIdOrderByCreatedAtDesc(storeOwnerId);
     }
 
-    public List<CustomerOrder> getOrdersByPhone(String customerPhone) {
-        if (customerPhone == null || customerPhone.isBlank()) {
-            return List.of();
-        }
-        return customerOrderRepository.findByCustomerPhoneOrderByCreatedAtDesc(customerPhone.trim());
+    public List<CustomerOrder> getCustomerOrders(Long customerId) {
+        requireRole(customerId, UserRole.CUSTOMER);
+        return customerOrderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
     @Transactional
-    public CustomerOrder createCustomerOrder(CustomerOrderCreateDTO request) {
+    public CustomerOrder createCustomerOrder(CustomerOrderCreateDTO request, Long customerId) {
+        User customer = requireRole(customerId, UserRole.CUSTOMER);
         OrderType orderType = orderTypeRepository.findById(request.getOrderTypeId())
                 .orElseThrow(() -> new OrderTypeNotFoundException("주문 가능한 품목을 찾을 수 없습니다."));
+
+        if (orderType.getStoreOwner() == null || orderType.getStoreOwner().getRole() != UserRole.STORE_OWNER) {
+            throw new IllegalArgumentException("담당 매장이 없는 상품은 주문할 수 없습니다.");
+        }
+        if (request.getQuantity() == null || request.getQuantity() < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
 
         if (request.getFulfillmentType() == CustomerFulfillmentType.DELIVERY
                 && (request.getDeliveryAddress() == null || request.getDeliveryAddress().isBlank())) {
@@ -73,6 +90,8 @@ public class CustomerOrderService {
 
         CustomerOrder order = new CustomerOrder();
         order.setOrderType(orderType);
+        order.setCustomer(customer);
+        order.setStoreOwner(orderType.getStoreOwner());
         order.setQuantity(request.getQuantity());
         order.setCustomerName(request.getCustomerName().trim());
         order.setCustomerPhone(request.getCustomerPhone().trim());
@@ -83,9 +102,13 @@ public class CustomerOrderService {
     }
 
     @Transactional
-    public void updateStatus(Long orderId, CustomerOrderStatus nextStatus) {
+    public void updateStatus(Long orderId, CustomerOrderStatus nextStatus, Long storeOwnerId) {
+        requireRole(storeOwnerId, UserRole.STORE_OWNER);
         CustomerOrder order = customerOrderRepository.findByIdForStatusUpdate(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("고객 주문을 찾을 수 없습니다."));
+        if (!order.getStoreOwner().getId().equals(storeOwnerId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         CustomerOrderStatus previousStatus = order.getStatus();
         if (!previousStatus.canTransitionTo(nextStatus, order.getFulfillmentType())) {
             String flowName = order.getFulfillmentType() == CustomerFulfillmentType.PICKUP ? "픽업" : "배달";
@@ -105,6 +128,14 @@ public class CustomerOrderService {
                 .orElseThrow(() -> new InventoryNotFoundException("복원할 재고를 찾을 수 없습니다."));
         inventory.setQuantity(inventory.getQuantity() + order.getQuantity());
         inventoryRepository.save(inventory);
+    }
+
+    private User requireRole(Long userId, UserRole role) {
+        User user = userId == null ? null : users.findById(userId).orElse(null);
+        if (user == null || user.getRole() != role) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        return user;
     }
 
     private String trimToNull(String value) {

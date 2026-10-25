@@ -19,7 +19,7 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserRole role = UserRole.STORE_OWNER;
+    private UserRole role = UserRole.CUSTOMER;
 
     // 기본 생성자
     public User() {}
@@ -28,7 +28,7 @@ public class User {
     public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.role = UserRole.STORE_OWNER;
+        this.role = UserRole.CUSTOMER;
     }
 
     // Getters and Setters
@@ -56,10 +56,10 @@ public class User {
     }
 
     public UserRole getRole() {
-        return role == null ? UserRole.STORE_OWNER : role;
+        return role == null ? UserRole.CUSTOMER : role;
     }
 
     public void setRole(UserRole role) {
-        this.role = role == null ? UserRole.STORE_OWNER : role;
+        this.role = role == null ? UserRole.CUSTOMER : role;
     }
 }

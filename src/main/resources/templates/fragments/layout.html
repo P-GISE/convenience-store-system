@@ -25,11 +25,11 @@
                     <a class="nav-link" th:classappend="${active == 'customer-orders'} ? ' active' : ''"
                        th:href="@{/customer-orders}">고객 주문 처리</a>
                 </li>
-                <li class="nav-item" th:if="${session.username != null}">
+                <li class="nav-item" th:if="${session.role == 'HEADQUARTERS'}">
                     <a class="nav-link" th:classappend="${active == 'inventory'} ? ' active' : ''"
                        th:href="@{/inventory}">재고 현황</a>
                 </li>
-                <li class="nav-item" th:if="${session.username != null}">
+                <li class="nav-item" th:if="${session.role == 'STORE_OWNER' or session.role == 'HEADQUARTERS'}">
                     <a class="nav-link" th:classappend="${active == 'orders'} ? ' active' : ''"
                        th:href="@{/orders}"
                        th:text="${session.role == 'HEADQUARTERS'} ? '발주 내역' : '발주 요청'">발주 요청</a>
@@ -47,7 +47,7 @@
                        th:href="@{/inventory/disposed}">폐기 이력</a>
                 </li>
                 <li class="nav-item" th:if="${session.username != null}">
-                    <span class="role-chip" th:text="${session.role == 'HEADQUARTERS'} ? '본사' : '점주'">점주</span>
+                    <span class="role-chip" th:text="${session.role == 'HEADQUARTERS'} ? '본사' : (${session.role == 'STORE_OWNER'} ? '점주' : '고객')">점주</span>
                 </li>
                 <li class="nav-item" th:if="${session.username != null}">
                     <form class="logout-form" th:action="@{/logout}" method="post">

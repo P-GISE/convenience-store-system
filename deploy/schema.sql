@@ -1,10 +1,15 @@
 -- Reviewed fresh-database bootstrap only. Never mount into MySQL's auto-init directory.
-CREATE TABLE order_types (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255));
 CREATE TABLE users (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    role ENUM('STORE_OWNER','HEADQUARTERS') NOT NULL
+    role ENUM('CUSTOMER','STORE_OWNER','HEADQUARTERS') NOT NULL
+);
+CREATE TABLE order_types (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    store_owner_id BIGINT,
+    FOREIGN KEY (store_owner_id) REFERENCES users(id)
 );
 CREATE TABLE inventory (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -44,6 +49,8 @@ CREATE TABLE stock_transactions (
 CREATE TABLE customer_orders (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     order_type_id BIGINT NOT NULL,
+    customer_id BIGINT NOT NULL,
+    store_owner_id BIGINT NOT NULL,
     quantity INT NOT NULL,
     customer_name VARCHAR(80) NOT NULL,
     customer_phone VARCHAR(40) NOT NULL,
@@ -55,6 +62,8 @@ CREATE TABLE customer_orders (
     status_date DATETIME(6) NOT NULL,
     INDEX idx_customer_order_status (status),
     INDEX idx_customer_order_phone (customer_phone),
+    FOREIGN KEY (customer_id) REFERENCES users(id),
+    FOREIGN KEY (store_owner_id) REFERENCES users(id),
     FOREIGN KEY (order_type_id) REFERENCES order_types(id)
 );
 

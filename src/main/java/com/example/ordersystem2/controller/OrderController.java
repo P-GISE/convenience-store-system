@@ -42,7 +42,7 @@ public class OrderController {
      */
     @GetMapping
     public String showOrders(HttpSession session, Model model) {
-        if (!accessControlService.isLoggedIn(session)) {
+        if (!accessControlService.isStoreOwner(session) && !accessControlService.isHeadquarters(session)) {
             return accessControlService.redirectFor(session);
         }
 
@@ -51,7 +51,8 @@ public class OrderController {
                 ? orderService.getAllOrders()
                 : orderService.getOrdersByRequester(userId);
         model.addAttribute("orders", orders);
-        model.addAttribute("orderTypes", orderTypeService.getAllOrderTypes());
+        model.addAttribute("orderTypes", accessControlService.isHeadquarters(session)
+                ? orderTypeService.getAllOrderTypes() : orderTypeService.getStoreOrderTypes(userId));
         model.addAttribute("orderCreate", new OrderCreateDTO()); // "orderCreate"로 변경
         model.addAttribute("isStoreOwner", accessControlService.isStoreOwner(session));
         model.addAttribute("isHeadquarters", accessControlService.isHeadquarters(session));
@@ -71,7 +72,7 @@ public class OrderController {
             if (bindingResult.hasErrors()) {
                 logger.error("Binding errors: {}", bindingResult.getAllErrors());
                 model.addAttribute("orders", orderService.getOrdersByRequester(userId));
-                model.addAttribute("orderTypes", orderTypeService.getAllOrderTypes());
+                model.addAttribute("orderTypes", orderTypeService.getStoreOrderTypes(userId));
                 model.addAttribute("isStoreOwner", true);
                 model.addAttribute("isHeadquarters", false);
                 return "orders"; // "orders.html" 템플릿으로 돌아감
@@ -108,7 +109,7 @@ public class OrderController {
                 orderUpdate.setQuantity(order.getQuantity());
                 model.addAttribute("order", order);
                 model.addAttribute("orderUpdate", orderUpdate);
-                model.addAttribute("orderTypes", orderTypeService.getAllOrderTypes());
+                model.addAttribute("orderTypes", orderTypeService.getStoreOrderTypes(userId));
                 return "edit_order";
             } catch (OrderNotFoundException e) {
                 logger.error("Order not found: {}", e.getMessage());
@@ -135,7 +136,7 @@ public class OrderController {
                 } catch (OrderNotFoundException e) {
                     return "redirect:/orders?error=order_not_found";
                 }
-                model.addAttribute("orderTypes", orderTypeService.getAllOrderTypes());
+                model.addAttribute("orderTypes", orderTypeService.getStoreOrderTypes((Long) session.getAttribute("userId")));
                 return "edit_order";
             }
             try {

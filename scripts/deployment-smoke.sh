@@ -26,6 +26,23 @@ grep -q '"status":"UP"' build/deployment-evidence/health.json
 curl --fail --silent "http://127.0.0.1:${APP_PORT}/login" > build/deployment-evidence/login.html
 [[ "$(printf '%s\n' 'SELECT (SELECT COUNT(*) FROM users) + (SELECT COUNT(*) FROM order_types);' | sql)" == 0 ]]
 echo 'PASS: initialized schema healthy; no automatic users or products' | tee -a build/deployment-evidence/results.log
+printf '%s' '{"operation":"create-user","username":"synthetic-store","password":"synthetic-ci-only-password","role":"STORE_OWNER"}' |
+  "${compose[@]}" run --rm -T --no-deps -e STORE_BOOTSTRAP=true app > build/deployment-evidence/operator-user.log 2>&1
+grep -q 'operator_bootstrap status=created' build/deployment-evidence/operator-user.log
+printf '%s' '{"operation":"create-product","name":"synthetic-public-item","storeOwnerUsername":"synthetic-store","quantity":7}' |
+  "${compose[@]}" run --rm -T --no-deps -e STORE_BOOTSTRAP=true app > build/deployment-evidence/operator-product.log 2>&1
+grep -q 'operator_bootstrap status=created' build/deployment-evidence/operator-product.log
+curl --fail --silent "http://127.0.0.1:${APP_PORT}/shop" > build/deployment-evidence/public-catalog.html
+grep -q 'synthetic-public-item' build/deployment-evidence/public-catalog.html
+[[ "$(printf '%s\n' "SELECT COUNT(*) FROM order_types p JOIN users u ON p.store_owner_id=u.id JOIN inventory i ON i.order_type_id=p.id WHERE u.username='synthetic-store' AND u.role='STORE_OWNER' AND i.quantity=7;" | sql)" == 1 ]]
+if printf '%s' '{"operation":"create-user","username":"synthetic-store","password":"synthetic-replacement-password","role":"HEADQUARTERS"}' |
+  "${compose[@]}" run --rm -T --no-deps -e STORE_BOOTSTRAP=true app > build/deployment-evidence/operator-duplicate.log 2>&1; then
+  echo 'Operator bootstrap unexpectedly overwrote an account' >&2
+  exit 1
+fi
+[[ "$(printf '%s\n' "SELECT role FROM users WHERE username='synthetic-store';" | sql)" == STORE_OWNER ]]
+! grep -q 'synthetic-replacement-password' build/deployment-evidence/operator-duplicate.log
+echo 'PASS: stdin operator bootstrap creates scoped catalog and refuses account overwrite without logging passwords' | tee -a build/deployment-evidence/results.log
 if printf '%s\n' 'CREATE TABLE forbidden_ddl (id BIGINT);' | "${compose[@]}" exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u convenience convenience' > build/deployment-evidence/ddl-denied.log 2>&1; then
   echo 'Runtime user unexpectedly has DDL permission' >&2
   exit 1

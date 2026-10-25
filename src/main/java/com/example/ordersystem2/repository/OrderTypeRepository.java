@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface OrderTypeRepository extends JpaRepository<OrderType, Long> {
+    java.util.List<OrderType> findByStoreOwnerId(Long storeOwnerId);
 }

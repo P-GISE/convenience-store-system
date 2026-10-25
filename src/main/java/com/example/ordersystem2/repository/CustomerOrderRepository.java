@@ -29,8 +29,8 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
     Optional<CustomerOrder> findByIdForStatusUpdate(@Param("id") Long id);
 
     @EntityGraph(attributePaths = "orderType")
-    List<CustomerOrder> findAllByOrderByCreatedAtDesc();
+    List<CustomerOrder> findByStoreOwnerIdOrderByCreatedAtDesc(Long storeOwnerId);
 
     @EntityGraph(attributePaths = "orderType")
-    List<CustomerOrder> findByCustomerPhoneOrderByCreatedAtDesc(String customerPhone);
+    List<CustomerOrder> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 }

@@ -31,11 +31,11 @@ class UserServiceTest {
     }
 
     @Test
-    void registerUserDefaultsToStoreOwnerWhenRoleIsMissing() {
+    void registerUserDefaultsToCustomerWhenRoleIsMissing() {
         userService.registerUser("storeuser", "password123", null);
 
         User saved = userRepository.findByUsername("storeuser");
 
-        assertThat(saved.getRole()).isEqualTo(UserRole.STORE_OWNER);
+        assertThat(saved.getRole()).isEqualTo(UserRole.CUSTOMER);
     }
 }

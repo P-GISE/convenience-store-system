@@ -7,6 +7,8 @@ import com.example.ordersystem2.model.CustomerOrderStatus;
 import com.example.ordersystem2.model.Inventory;
 import com.example.ordersystem2.model.InventoryStatus;
 import com.example.ordersystem2.model.OrderType;
+import com.example.ordersystem2.model.User;
+import com.example.ordersystem2.model.UserRole;
 import com.example.ordersystem2.repository.CustomerOrderRepository;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderRepository;
@@ -51,9 +53,14 @@ class CustomerOrderServiceConcurrencyTest {
     @Autowired
     private UserRepository userRepository;
 
+    private User customer;
+    private User owner;
+
     @BeforeEach
     void setUp() {
         clearData();
+        customer = saveUser("concurrent-customer", UserRole.CUSTOMER);
+        owner = saveUser("concurrent-owner", UserRole.STORE_OWNER);
     }
 
     @AfterEach
@@ -90,7 +97,7 @@ class CustomerOrderServiceConcurrencyTest {
     void concurrentCancellationRestoresReservedInventoryOnlyOnce() throws Exception {
         OrderType product = saveProduct("동시 취소 상품");
         Inventory inventory = saveInventory(product, 5);
-        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 2, "010-2000-0001"));
+        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 2, "010-2000-0001"), customer.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch start = new CountDownLatch(1);
@@ -112,7 +119,7 @@ class CustomerOrderServiceConcurrencyTest {
     private void createAfter(CountDownLatch start, OrderType product, int quantity, String phone) {
         try {
             start.await(5, TimeUnit.SECONDS);
-            customerOrderService.createCustomerOrder(customerOrderRequest(product, quantity, phone));
+            customerOrderService.createCustomerOrder(customerOrderRequest(product, quantity, phone), customer.getId());
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -121,7 +128,7 @@ class CustomerOrderServiceConcurrencyTest {
     private void cancelAfter(CountDownLatch start, Long orderId) {
         try {
             start.await(5, TimeUnit.SECONDS);
-            customerOrderService.updateStatus(orderId, CustomerOrderStatus.CANCELLED);
+            customerOrderService.updateStatus(orderId, CustomerOrderStatus.CANCELLED, owner.getId());
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -147,7 +154,14 @@ class CustomerOrderServiceConcurrencyTest {
     private OrderType saveProduct(String name) {
         OrderType orderType = new OrderType();
         orderType.setName(name);
+        orderType.setStoreOwner(owner);
         return orderTypeRepository.save(orderType);
+    }
+
+    private User saveUser(String username, UserRole role) {
+        User user = new User(username, "synthetic-encoded");
+        user.setRole(role);
+        return userRepository.save(user);
     }
 
     private Inventory saveInventory(OrderType product, int quantity) {

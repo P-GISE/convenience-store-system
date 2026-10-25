@@ -61,10 +61,10 @@ public class AuthController {
         userService.registerUser(
                 userRegistrationRequestDTO.getUsername(),
                 userRegistrationRequestDTO.getPassword(),
-                UserRole.STORE_OWNER
+                UserRole.CUSTOMER
         );
 
-        logger.debug("User {} registered successfully.", userRegistrationRequestDTO.getUsername());
+        logger.debug("Customer registration succeeded.");
 
         // 로그인 페이지로 리다이렉트
         return "redirect:/login?signup_success";
@@ -100,9 +100,9 @@ public class AuthController {
             newSession.setAttribute("username", user.getUsername()); // 사용자명 저장 (선택 사항)
             newSession.setAttribute("role", user.getRole().name());
 
-            logger.debug("User {} logged in. Session ID: {}", user.getUsername(), newSession.getId());
+            logger.debug("Login succeeded.");
 
-            return "redirect:/home2"; // 로그인 후 대시보드로 리다이렉트
+            return user.getRole() == UserRole.CUSTOMER ? "redirect:/shop" : "redirect:/home2"; // 로그인 후 대시보드로 리다이렉트
         } else {
             bindingResult.reject("invalidCredentials", "사용자명 또는 비밀번호가 잘못되었습니다.");
             return "login";
@@ -112,7 +112,7 @@ public class AuthController {
     // 로그아웃 처리
     @PostMapping("/logout")
     public String logout(HttpSession session) {
-        logger.debug("User logged out. Session ID: {}", session.getId());
+        logger.debug("Logout succeeded.");
         session.invalidate();
         return "redirect:/login?logout_success";
     }

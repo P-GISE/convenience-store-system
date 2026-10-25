@@ -73,6 +73,8 @@ class WebSecurityFlowTest {
     void orderPostWithSessionCsrfTokenCreatesRequesterScopedOrder() throws Exception {
         User storeOwner = saveUser("csrfAcceptedStoreOwner", UserRole.STORE_OWNER);
         OrderType product = saveProduct("CSRF Accepted Product");
+        product.setStoreOwner(storeOwner);
+        orderTypeRepository.save(product);
         MockHttpSession session = sessionFor(storeOwner);
         String csrfToken = csrfTokenService.getOrCreateToken(session);
 
@@ -112,6 +114,8 @@ class WebSecurityFlowTest {
         User firstOwner = saveUser("firstMvcOwner", UserRole.STORE_OWNER);
         User secondOwner = saveUser("secondMvcOwner", UserRole.STORE_OWNER);
         OrderType product = saveProduct("Scoped MVC Product");
+        product.setStoreOwner(firstOwner);
+        orderTypeRepository.save(product);
         orderService.createOrder(orderRequest(product, 4), firstOwner.getId());
         Order order = orderRepository.findAll().get(0);
 

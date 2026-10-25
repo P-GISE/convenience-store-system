@@ -1,6 +1,5 @@
 package com.example.ordersystem2.dto;
 
-import com.example.ordersystem2.model.UserRole;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -17,7 +16,6 @@ public class UserRegistrationRequestDTO {
     @NotBlank(message = "비밀번호 확인은 필수입니다.")
     private String confirmPassword;
 
-    private UserRole role = UserRole.STORE_OWNER;
 
     // Getters and Setters
     public String getUsername() {
@@ -44,11 +42,4 @@ public class UserRegistrationRequestDTO {
         this.confirmPassword = confirmPassword;
     }
 
-    public UserRole getRole() {
-        return role == null ? UserRole.STORE_OWNER : role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role == null ? UserRole.STORE_OWNER : role;
-    }
 }

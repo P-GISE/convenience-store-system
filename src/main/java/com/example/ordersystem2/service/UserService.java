@@ -42,7 +42,7 @@ public class UserService {
 
     // 사용자 등록 메소드
     public User registerUser(String username, String password) {
-        return registerUser(username, password, UserRole.STORE_OWNER);
+        return registerUser(username, password, UserRole.CUSTOMER);
     }
 
     public User registerUser(String username, String password, UserRole role) {

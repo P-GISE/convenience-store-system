@@ -21,7 +21,7 @@
         <a th:href="@{/customer-orders}" class="btn btn-primary" th:if="${isStoreOwner}">고객 주문 처리</a>
         <a th:href="@{/orders}" class="btn btn-primary" th:text="${isHeadquarters} ? '발주 내역 보기' : '발주 요청하기'">발주 요청하기</a>
         <a th:href="@{/dashboard}" class="btn btn-outline-primary" th:if="${isHeadquarters}">처리 대시보드</a>
-        <a th:href="@{/inventory}" class="btn btn-outline-primary">재고 현황</a>
+        <a th:href="@{/inventory}" class="btn btn-outline-primary" th:if="${isHeadquarters}">재고 현황</a>
       </div>
     </div>
     <ul class="workflow-list" aria-label="주요 업무">

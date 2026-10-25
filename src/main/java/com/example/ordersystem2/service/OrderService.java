@@ -12,6 +12,7 @@ import com.example.ordersystem2.model.OrderType;
 import com.example.ordersystem2.model.StockTransaction;
 import com.example.ordersystem2.model.TransactionStatus;
 import com.example.ordersystem2.model.User;
+import com.example.ordersystem2.model.UserRole;
 import com.example.ordersystem2.repository.OrderRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
 import com.example.ordersystem2.repository.UserRepository;
@@ -75,6 +76,7 @@ public class OrderService {
         if (requesterId != null) {
             User requester = userRepository.findById(requesterId)
                     .orElseThrow(() -> new OrderNotFoundException("요청 사용자를 찾을 수 없습니다."));
+            requireStoreProduct(orderType, requester);
             order.setRequester(requester);
         }
 
@@ -117,6 +119,9 @@ public class OrderService {
 
         OrderType newOrderType = orderTypeRepository.findById(orderTypeId)
                 .orElseThrow(() -> new OrderNotFoundException("발주 종류를 찾을 수 없습니다."));
+        if (requesterId != null) {
+            requireStoreProduct(newOrderType, order.getRequester());
+        }
 
         order.setOrderType(newOrderType);
         order.setQuantity(quantity);
@@ -124,6 +129,13 @@ public class OrderService {
         order.setStatus(OrderStatus.RECEIVED); // 상태를 초기 상태로 리셋 (필요에 따라 조정)
         orderRepository.save(order);
         logger.info("Order updated successfully. Order ID: {}", order.getId());
+    }
+
+    private void requireStoreProduct(OrderType product, User requester) {
+        if (requester.getRole() != UserRole.STORE_OWNER || product.getStoreOwner() == null
+                || !product.getStoreOwner().getId().equals(requester.getId())) {
+            throw new OrderNotFoundException("담당 매장의 상품을 찾을 수 없습니다.");
+        }
     }
 
     /**
