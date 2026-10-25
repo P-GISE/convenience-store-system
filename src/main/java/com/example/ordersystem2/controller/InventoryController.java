@@ -46,7 +46,7 @@ public class InventoryController {
      */
     @GetMapping
     public String showInventory(HttpSession session, Model model) {
-        if (!accessControlService.isLoggedIn(session)) {
+        if (!accessControlService.isHeadquarters(session)) {
             return accessControlService.redirectFor(session);
         }
 

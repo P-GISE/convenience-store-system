@@ -10,6 +10,7 @@ import com.example.ordersystem2.model.OrderType;
 import com.example.ordersystem2.model.StockTransaction;
 import com.example.ordersystem2.model.TransactionStatus;
 import com.example.ordersystem2.model.User;
+import com.example.ordersystem2.model.UserRole;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
@@ -145,6 +146,8 @@ class OrderServiceTest {
         User firstOwner = saveUser("firstOwner");
         User secondOwner = saveUser("secondOwner");
         OrderType product = saveProduct("Fresh Sandwich");
+        product.setStoreOwner(firstOwner);
+        orderTypeRepository.save(product);
 
         orderService.createOrder(orderRequest(product, 3), firstOwner.getId());
         Order order = orderRepository.findAll().get(0);
@@ -157,6 +160,26 @@ class OrderServiceTest {
                 .isInstanceOf(OrderNotFoundException.class);
     }
 
+    @Test
+    void storeCannotRequestOrSwitchToAnotherStoresProduct() {
+        User owner = saveUser("stock-owner-one");
+        User other = saveUser("stock-owner-two");
+        OrderType ownProduct = saveProduct("Own stock item");
+        ownProduct.setStoreOwner(owner);
+        orderTypeRepository.save(ownProduct);
+        OrderType foreignProduct = saveProduct("Other stock item");
+        foreignProduct.setStoreOwner(other);
+        orderTypeRepository.save(foreignProduct);
+        assertThatThrownBy(() -> orderService.createOrder(orderRequest(foreignProduct, 2), owner.getId()))
+                .isInstanceOf(OrderNotFoundException.class);
+        assertThat(orderRepository.findAll()).isEmpty();
+        orderService.createOrder(orderRequest(ownProduct, 2), owner.getId());
+        Order order = orderRepository.findAll().get(0);
+        assertThatThrownBy(() -> orderService.updateOrder(order.getId(), foreignProduct.getId(), 4, owner.getId()))
+                .isInstanceOf(OrderNotFoundException.class);
+        assertThat(order.getOrderType().getId()).isEqualTo(ownProduct.getId());
+    }
+
     private OrderType saveProduct(String name) {
         OrderType orderType = new OrderType();
         orderType.setName(name);
@@ -167,6 +190,7 @@ class OrderServiceTest {
         User user = new User();
         user.setUsername(username);
         user.setPassword("encoded-password");
+        user.setRole(UserRole.STORE_OWNER);
         return userRepository.save(user);
     }
 

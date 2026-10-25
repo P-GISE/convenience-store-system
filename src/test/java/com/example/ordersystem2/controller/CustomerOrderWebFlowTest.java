@@ -16,6 +16,7 @@ import com.example.ordersystem2.repository.OrderTypeRepository;
 import com.example.ordersystem2.repository.UserRepository;
 import com.example.ordersystem2.service.CustomerOrderService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,6 +59,15 @@ class CustomerOrderWebFlowTest {
     @Autowired
     private UserRepository userRepository;
 
+    private User customer;
+    private User owner;
+
+    @BeforeEach
+    void users() {
+        customer = saveUser("synthetic-web-customer", UserRole.CUSTOMER);
+        owner = saveUser("synthetic-web-owner", UserRole.STORE_OWNER);
+    }
+
     @Test
     void publicShopShowsActiveInventoryAndFulfillmentChoices() throws Exception {
         OrderType product = saveProduct("즉석커피");
@@ -66,15 +76,14 @@ class CustomerOrderWebFlowTest {
         mockMvc.perform(get("/shop"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("즉석커피")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("매장 픽업")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("배달")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("로그인하고 주문하기")));
     }
 
     @Test
     void publicCustomerOrderRequiresCsrfAndReservesInventory() throws Exception {
         OrderType product = saveProduct("초코바");
         Inventory inventory = saveInventory(product, 6);
-        MockHttpSession session = new MockHttpSession();
+        MockHttpSession session = sessionFor(customer);
 
         mockMvc.perform(post("/shop")
                         .session(session)
@@ -105,10 +114,10 @@ class CustomerOrderWebFlowTest {
 
     @Test
     void storeOwnerCanViewAndAdvanceCustomerOrders() throws Exception {
-        User storeOwner = saveUser("customerOpsOwner", UserRole.STORE_OWNER);
+        User storeOwner = owner;
         OrderType product = saveProduct("치킨샐러드");
         saveInventory(product, 5);
-        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1));
+        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1), customer.getId());
         MockHttpSession session = sessionFor(storeOwner);
 
         mockMvc.perform(get("/customer-orders").session(session))
@@ -140,7 +149,7 @@ class CustomerOrderWebFlowTest {
         User headquarters = saveUser("customerOpsHeadquarters", UserRole.HEADQUARTERS);
         OrderType product = saveProduct("본사 제한 상품");
         saveInventory(product, 5);
-        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1));
+        CustomerOrder order = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1), customer.getId());
         MockHttpSession session = sessionFor(headquarters);
 
         mockMvc.perform(get("/customer-orders").session(session))
@@ -157,6 +166,110 @@ class CustomerOrderWebFlowTest {
 
         CustomerOrder savedOrder = customerOrderRepository.findById(order.getId()).orElseThrow();
         assertThat(savedOrder.getStatus()).isEqualTo(CustomerOrderStatus.RECEIVED);
+    }
+
+    @Test
+    void publicSignupCannotChoosePrivilegedRoleAndCustomerLoginRotatesSession() throws Exception {
+        MockHttpSession signupSession = new MockHttpSession();
+        String token = csrfTokenService.getOrCreateToken(signupSession);
+        mockMvc.perform(post("/signup").session(signupSession).param("_csrf", token)
+                        .param("username", "public-customer").param("password", "synthetic-password-123")
+                        .param("confirmPassword", "synthetic-password-123").param("role", "HEADQUARTERS"))
+                .andExpect(redirectedUrl("/login?signup_success"));
+        User registered = userRepository.findByUsername("public-customer");
+        assertThat(registered.getRole()).isEqualTo(UserRole.CUSTOMER);
+        var login = mockMvc.perform(post("/login").session(signupSession).param("_csrf", token)
+                        .param("username", "public-customer").param("password", "synthetic-password-123"))
+                .andExpect(redirectedUrl("/shop")).andReturn();
+        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+        assertThat(signupSession.isInvalid()).isTrue();
+        assertThat(session.getAttribute("userId")).isEqualTo(registered.getId());
+        for (String route : new String[]{"/home2", "/inventory", "/orders", "/dashboard", "/stock-transactions", "/customer-orders"}) {
+            mockMvc.perform(get(route).session(session)).andExpect(redirectedUrl("/shop"));
+        }
+    }
+
+    @Test
+    void customersOnlySeeOwnOrdersAndAnonymousPhoneLookupRevealsNothing() throws Exception {
+        User second = saveUser("second-customer", UserRole.CUSTOMER);
+        OrderType product = saveProduct("scope-product");
+        saveInventory(product, 5);
+        CustomerOrder firstOrder = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1), customer.getId());
+        CustomerOrder secondOrder = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1), second.getId());
+        var firstView = mockMvc.perform(get("/shop").session(sessionFor(customer)).param("phone", secondOrder.getCustomerPhone()))
+                .andExpect(status().isOk()).andReturn();
+        assertThat((java.util.List<?>) firstView.getModelAndView().getModel().get("lookupOrders"))
+                .isEqualTo(java.util.List.of(firstOrder));
+        var secondView = mockMvc.perform(get("/shop").session(sessionFor(second)))
+                .andExpect(status().isOk()).andReturn();
+        assertThat((java.util.List<?>) secondView.getModelAndView().getModel().get("lookupOrders"))
+                .isEqualTo(java.util.List.of(secondOrder));
+        var anonymous = mockMvc.perform(get("/shop").param("phone", firstOrder.getCustomerPhone()))
+                .andExpect(status().isOk()).andReturn();
+        assertThat((java.util.List<?>) anonymous.getModelAndView().getModel().get("lookupOrders")).isEmpty();
+    }
+
+    @Test
+    void storeCannotViewOrChangeOtherStoresOrdersEvenWithForgedSessionRole() throws Exception {
+        User secondOwner = saveUser("second-owner", UserRole.STORE_OWNER);
+        OrderType product = saveProduct("first-store-product");
+        OrderType secondProduct = saveProduct("second-store-product");
+        secondProduct.setStoreOwner(secondOwner);
+        orderTypeRepository.save(secondProduct);
+        saveInventory(product, 5);
+        saveInventory(secondProduct, 5);
+        CustomerOrder first = customerOrderService.createCustomerOrder(customerOrderRequest(product, 1), customer.getId());
+        CustomerOrder second = customerOrderService.createCustomerOrder(customerOrderRequest(secondProduct, 1), customer.getId());
+        MockHttpSession session = sessionFor(owner);
+        session.setAttribute("role", "HEADQUARTERS");
+        var view = mockMvc.perform(get("/customer-orders").session(session)).andExpect(status().isOk()).andReturn();
+        assertThat((java.util.List<?>) view.getModelAndView().getModel().get("customerOrders")).isEqualTo(java.util.List.of(first));
+        mockMvc.perform(post("/customer-orders/{id}/status", second.getId()).session(session)
+                        .param("_csrf", csrfTokenService.getOrCreateToken(session)).param("status", "CANCELLED"))
+                .andExpect(status().isNotFound());
+        assertThat(second.getStatus()).isEqualTo(CustomerOrderStatus.RECEIVED);
+        assertThat(inventoryRepository.findByOrderType(secondProduct).orElseThrow().getQuantity()).isEqualTo(4);
+    }
+
+    @Test
+    void ownershipParametersCannotAssignAnotherCustomerOrStore() throws Exception {
+        User otherCustomer = saveUser("forged-customer", UserRole.CUSTOMER);
+        User otherOwner = saveUser("forged-owner", UserRole.STORE_OWNER);
+        OrderType product = saveProduct("ownership-product");
+        saveInventory(product, 5);
+        MockHttpSession session = sessionFor(customer);
+        mockMvc.perform(post("/shop").session(session)
+                        .param("_csrf", csrfTokenService.getOrCreateToken(session))
+                        .param("orderTypeId", product.getId().toString()).param("quantity", "1")
+                        .param("customerName", "Synthetic customer").param("customerPhone", "synthetic-phone")
+                        .param("fulfillmentType", "PICKUP")
+                        .param("customerId", otherCustomer.getId().toString()).param("storeOwnerId", otherOwner.getId().toString()))
+                .andExpect(redirectedUrl("/shop?success=created"));
+        CustomerOrder saved = customerOrderRepository.findAll().get(0);
+        assertThat(saved.getCustomer().getId()).isEqualTo(customer.getId());
+        assertThat(saved.getStoreOwner().getId()).isEqualTo(owner.getId());
+    }
+
+    @Test
+    void anonymousOrderAndMultipleStoreProductsAreRejectedWithoutReservingInventory() throws Exception {
+        OrderType first = saveProduct("mixed-store-first");
+        OrderType second = saveProduct("mixed-store-second");
+        second.setStoreOwner(saveUser("mixed-second-owner", UserRole.STORE_OWNER));
+        orderTypeRepository.save(second);
+        Inventory stock = saveInventory(first, 5);
+        saveInventory(second, 5);
+        MockHttpSession anonymous = new MockHttpSession();
+        mockMvc.perform(post("/shop").session(anonymous).param("_csrf", csrfTokenService.getOrCreateToken(anonymous))
+                        .param("orderTypeId", first.getId().toString()).param("quantity", "1")
+                        .param("customerName", "Synthetic").param("customerPhone", "synthetic-phone").param("fulfillmentType", "PICKUP"))
+                .andExpect(redirectedUrl("/login"));
+        MockHttpSession session = sessionFor(customer);
+        mockMvc.perform(post("/shop").session(session).param("_csrf", csrfTokenService.getOrCreateToken(session))
+                        .param("orderTypeId", first.getId().toString(), second.getId().toString()).param("quantity", "1")
+                        .param("customerName", "Synthetic").param("customerPhone", "synthetic-phone").param("fulfillmentType", "PICKUP"))
+                .andExpect(status().isBadRequest());
+        assertThat(customerOrderRepository.findAll()).isEmpty();
+        assertThat(inventoryRepository.findById(stock.getId()).orElseThrow().getQuantity()).isEqualTo(5);
     }
 
     private MockHttpSession sessionFor(User user) {
@@ -178,6 +291,7 @@ class CustomerOrderWebFlowTest {
     private OrderType saveProduct(String name) {
         OrderType orderType = new OrderType();
         orderType.setName(name);
+        orderType.setStoreOwner(owner);
         return orderTypeRepository.save(orderType);
     }
 

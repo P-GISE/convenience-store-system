@@ -8,6 +8,10 @@ import com.example.ordersystem2.model.CustomerOrderStatus;
 import com.example.ordersystem2.model.Inventory;
 import com.example.ordersystem2.model.InventoryStatus;
 import com.example.ordersystem2.model.OrderType;
+import com.example.ordersystem2.model.User;
+import com.example.ordersystem2.model.UserRole;
+import com.example.ordersystem2.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import com.example.ordersystem2.repository.CustomerOrderRepository;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
@@ -35,13 +39,25 @@ class CustomerOrderServiceTest {
     @Autowired
     private OrderTypeRepository orderTypeRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User customer;
+    private User owner;
+
+    @BeforeEach
+    void users() {
+        customer = saveUser("synthetic-customer", UserRole.CUSTOMER);
+        owner = saveUser("synthetic-owner", UserRole.STORE_OWNER);
+    }
+
     @Test
     void pickupCustomerOrderReservesInventoryImmediately() throws Exception {
         OrderType product = saveProduct("도시락");
         Inventory inventory = saveInventory(product, 8);
         CustomerOrderCreateDTO request = customerOrderRequest(product, 3, CustomerFulfillmentType.PICKUP);
 
-        CustomerOrder order = customerOrderService.createCustomerOrder(request);
+        CustomerOrder order = customerOrderService.createCustomerOrder(request, customer.getId());
 
         Inventory savedInventory = inventoryRepository.findById(inventory.getId()).orElseThrow();
         CustomerOrder savedOrder = customerOrderRepository.findById(order.getId()).orElseThrow();
@@ -58,7 +74,7 @@ class CustomerOrderServiceTest {
         CustomerOrderCreateDTO request = customerOrderRequest(product, 2, CustomerFulfillmentType.DELIVERY);
         request.setDeliveryAddress(" ");
 
-        assertThatThrownBy(() -> customerOrderService.createCustomerOrder(request))
+        assertThatThrownBy(() -> customerOrderService.createCustomerOrder(request, customer.getId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("배달 주소");
     }
@@ -69,7 +85,7 @@ class CustomerOrderServiceTest {
         Inventory inventory = saveInventory(product, 2);
         CustomerOrderCreateDTO request = customerOrderRequest(product, 3, CustomerFulfillmentType.PICKUP);
 
-        assertThatThrownBy(() -> customerOrderService.createCustomerOrder(request))
+        assertThatThrownBy(() -> customerOrderService.createCustomerOrder(request, customer.getId()))
                 .isInstanceOf(InsufficientInventoryException.class);
 
         Inventory savedInventory = inventoryRepository.findById(inventory.getId()).orElseThrow();
@@ -82,9 +98,9 @@ class CustomerOrderServiceTest {
         OrderType product = saveProduct("아이스커피");
         saveInventory(product, 6);
         CustomerOrder order = customerOrderService.createCustomerOrder(
-                customerOrderRequest(product, 1, CustomerFulfillmentType.PICKUP));
+                customerOrderRequest(product, 1, CustomerFulfillmentType.PICKUP), customer.getId());
 
-        assertThatThrownBy(() -> customerOrderService.updateStatus(order.getId(), CustomerOrderStatus.OUT_FOR_DELIVERY))
+        assertThatThrownBy(() -> customerOrderService.updateStatus(order.getId(), CustomerOrderStatus.OUT_FOR_DELIVERY, owner.getId()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("픽업");
 
@@ -97,9 +113,9 @@ class CustomerOrderServiceTest {
         OrderType product = saveProduct("핫바");
         Inventory inventory = saveInventory(product, 4);
         CustomerOrder order = customerOrderService.createCustomerOrder(
-                customerOrderRequest(product, 2, CustomerFulfillmentType.PICKUP));
+                customerOrderRequest(product, 2, CustomerFulfillmentType.PICKUP), customer.getId());
 
-        customerOrderService.updateStatus(order.getId(), CustomerOrderStatus.CANCELLED);
+        customerOrderService.updateStatus(order.getId(), CustomerOrderStatus.CANCELLED, owner.getId());
 
         Inventory savedInventory = inventoryRepository.findById(inventory.getId()).orElseThrow();
         CustomerOrder savedOrder = customerOrderRepository.findById(order.getId()).orElseThrow();
@@ -110,7 +126,14 @@ class CustomerOrderServiceTest {
     private OrderType saveProduct(String name) {
         OrderType orderType = new OrderType();
         orderType.setName(name);
+        orderType.setStoreOwner(owner);
         return orderTypeRepository.save(orderType);
+    }
+
+    private User saveUser(String username, UserRole role) {
+        User user = new User(username, "synthetic-encoded");
+        user.setRole(role);
+        return userRepository.save(user);
     }
 
     private Inventory saveInventory(OrderType product, int quantity) {

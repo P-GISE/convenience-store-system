@@ -23,6 +23,14 @@ public class CustomerOrder {
     @JoinColumn(name = "order_type_id", nullable = false)
     private OrderType orderType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private User customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_owner_id", nullable = false)
+    private User storeOwner;
+
     @Column(nullable = false)
     private Integer quantity;
 

@@ -29,6 +29,10 @@ public class HomeController {
             return "redirect:/login";
         }
 
+        if (user.getRole() == UserRole.CUSTOMER) {
+            return "redirect:/shop";
+        }
+
         model.addAttribute("username", user.getUsername());
         model.addAttribute("isHeadquarters", user.getRole() == UserRole.HEADQUARTERS);
         model.addAttribute("isStoreOwner", user.getRole() == UserRole.STORE_OWNER);

@@ -19,6 +19,10 @@ public class OrderType {
 
     private String name;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_owner_id")
+    private User storeOwner;
+
     // Order 엔티티와의 일대다 관계
     @OneToMany(mappedBy = "orderType", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Order> orders;

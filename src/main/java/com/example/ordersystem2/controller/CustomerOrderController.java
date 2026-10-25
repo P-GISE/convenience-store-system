@@ -4,9 +4,13 @@ import com.example.ordersystem2.dto.CustomerOrderCreateDTO;
 import com.example.ordersystem2.exception.InsufficientInventoryException;
 import com.example.ordersystem2.model.CustomerFulfillmentType;
 import com.example.ordersystem2.model.CustomerOrderStatus;
+import com.example.ordersystem2.model.UserRole;
+import org.springframework.web.server.ResponseStatusException;
 import com.example.ordersystem2.service.AccessControlService;
 import com.example.ordersystem2.service.CustomerOrderService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,26 +30,33 @@ public class CustomerOrderController {
     }
 
     @GetMapping("/shop")
-    public String showShop(@RequestParam(value = "phone", required = false) String phone, Model model) {
+    public String showShop(HttpSession session, Model model) {
         model.addAttribute("catalogItems", customerOrderService.getAvailableCatalogItems());
         model.addAttribute("customerOrderCreate", new CustomerOrderCreateDTO());
         model.addAttribute("fulfillmentTypes", CustomerFulfillmentType.values());
-        model.addAttribute("lookupPhone", phone);
-        model.addAttribute("lookupOrders", customerOrderService.getOrdersByPhone(phone));
+        model.addAttribute("lookupOrders", accessControlService.hasRole(session, UserRole.CUSTOMER)
+                ? customerOrderService.getCustomerOrders((Long) session.getAttribute("userId")) : java.util.List.of());
         return "customer_shop";
     }
 
     @PostMapping("/shop")
     public String createCustomerOrder(@Valid @ModelAttribute("customerOrderCreate") CustomerOrderCreateDTO request,
                                       BindingResult bindingResult,
-                                      Model model) {
+                                      Model model, HttpSession session, HttpServletRequest httpRequest) {
+        if (!accessControlService.hasRole(session, UserRole.CUSTOMER)) {
+            return accessControlService.redirectFor(session);
+        }
+        String[] products = httpRequest.getParameterValues("orderTypeId");
+        if (products != null && products.length != 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         if (bindingResult.hasErrors()) {
             prepareShopModel(model);
             return "customer_shop";
         }
 
         try {
-            customerOrderService.createCustomerOrder(request);
+            customerOrderService.createCustomerOrder(request, (Long) session.getAttribute("userId"));
             return "redirect:/shop?success=created";
         } catch (InsufficientInventoryException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -64,7 +75,7 @@ public class CustomerOrderController {
             return accessControlService.redirectFor(session);
         }
 
-        model.addAttribute("customerOrders", customerOrderService.getAllOrders());
+        model.addAttribute("customerOrders", customerOrderService.getStoreOrders((Long) session.getAttribute("userId")));
         model.addAttribute("statuses", CustomerOrderStatus.values());
         return "customer_orders";
     }
@@ -78,8 +89,10 @@ public class CustomerOrderController {
         }
 
         try {
-            customerOrderService.updateStatus(id, status);
+            customerOrderService.updateStatus(id, status, (Long) session.getAttribute("userId"));
             return "redirect:/customer-orders?success=status_updated";
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (IllegalStateException e) {
             return "redirect:/customer-orders?error=invalid_status_transition";
         } catch (Exception e) {
@@ -90,6 +103,6 @@ public class CustomerOrderController {
     private void prepareShopModel(Model model) {
         model.addAttribute("catalogItems", customerOrderService.getAvailableCatalogItems());
         model.addAttribute("fulfillmentTypes", CustomerFulfillmentType.values());
-        model.addAttribute("lookupOrders", customerOrderService.getOrdersByPhone(null));
+        model.addAttribute("lookupOrders", java.util.List.of());
     }
 }

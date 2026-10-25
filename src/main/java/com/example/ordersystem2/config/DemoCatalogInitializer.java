@@ -5,6 +5,7 @@ import com.example.ordersystem2.model.InventoryStatus;
 import com.example.ordersystem2.model.OrderType;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
+import com.example.ordersystem2.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -19,17 +20,23 @@ public class DemoCatalogInitializer implements CommandLineRunner {
 
     private final OrderTypeRepository orderTypeRepository;
     private final InventoryRepository inventoryRepository;
+    private final UserRepository userRepository;
 
     public DemoCatalogInitializer(OrderTypeRepository orderTypeRepository,
-                                  InventoryRepository inventoryRepository) {
+                                  InventoryRepository inventoryRepository, UserRepository userRepository) {
         this.orderTypeRepository = orderTypeRepository;
         this.inventoryRepository = inventoryRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
     public void run(String... args) {
         List<OrderType> products = orderTypeRepository.findAll();
         for (OrderType product : products) {
+            if (product.getStoreOwner() == null) {
+                product.setStoreOwner(userRepository.findByUsername("store_demo"));
+                orderTypeRepository.save(product);
+            }
             inventoryRepository.findByOrderType(product).orElseGet(() -> saveInventory(product));
         }
     }
