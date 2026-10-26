@@ -1,6 +1,6 @@
 # Spring Boot 4 플랫폼 보안 갱신
 
-상태: 소스 구현·로컬 검증 완료, 격리 Linux/MySQL 호환성 CI 확인 전. 운영 적용 없음.
+상태: 소스·로컬 검증 및 격리 Linux/MySQL 호환성 CI 통과. 운영 적용 없음.
 
 ## 변경 범위
 
@@ -22,6 +22,8 @@
 - 기존/신규 Spring Session JDBC 직렬화 세션과 CSRF 토큰의 양방향 호환
 - 고객별 주문 조회 분리, 점주별 주문 조회 분리 및 타 점주 상태 변경 404
 - 픽업 주문 행/상태 보존, 잘못된 CSRF 차단 및 로그아웃
+
+GitHub Actions `40271772108`에서 기존 53개 Java 테스트, 이미지 빌드, 실제 MySQL old→new→old→new 게이트가 통과했다. `platform-upgrade.json`의 모든 10개 결과가 true다. 최초 실행에서 빈 스키마 거절은 정상이나 Hibernate7 진단이 `Schema-validation`에서 `Schema validation`으로 바뀌어 기존 문자열 검사만 실패했고, 두 표현을 정확히 허용하도록 수정했다. 빈 스키마 테이블0·시작실패·runtime DDL 거절 검사는 유지했다.
 
 테스트 데이터는 합성 계정·상품·주문뿐이다. Secure 쿠키의 실제 응답 플래그를 검사하면서 CI loopback HTTP 전송에서만 테스트 CookieJar가 이를 돌려준다. 운영 쿠키 설정을 완화하지 않는다. 쿠키·토큰·비밀번호 해시·업무 본문은 증거로 출력하지 않고 결과 boolean만 저장한다.
 
