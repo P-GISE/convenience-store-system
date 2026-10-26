@@ -16,7 +16,7 @@ timeout 90 "${compose[@]}" run --rm -T app > build/deployment-evidence/empty-sch
 result=$?
 set -e
 [[ "$result" != 0 && "$result" != 124 ]]
-grep -q 'Schema-validation: missing table' build/deployment-evidence/empty-schema.log
+grep -Eq 'Schema[- ]validation: missing table' build/deployment-evidence/empty-schema.log
 [[ "$(printf '%s\n' "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='convenience';" | sql)" == 0 ]]
 echo 'PASS: empty schema rejected without creating tables' | tee build/deployment-evidence/results.log
 sql < deploy/schema.sql
@@ -53,3 +53,4 @@ printf '%s\n' "INSERT INTO order_types(name) VALUES ('synthetic-persistence-sent
 "${compose[@]}" up -d --wait --wait-timeout 180 app
 [[ "$(printf '%s\n' "SELECT COUNT(*) FROM order_types WHERE name='synthetic-persistence-sentinel';" | sql)" == 1 ]]
 echo 'PASS: runtime DDL denied and existing data survives restart' | tee -a build/deployment-evidence/results.log
+python3 scripts/platform-upgrade-check.py

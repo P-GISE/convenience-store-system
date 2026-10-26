@@ -6,6 +6,7 @@ import com.example.ordersystem2.dto.UserRegistrationRequestDTO;
 import com.example.ordersystem2.model.User;
 import com.example.ordersystem2.model.UserRole;
 import com.example.ordersystem2.service.UserService;
+import com.example.ordersystem2.config.AuthRateLimitInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -90,6 +91,7 @@ public class AuthController {
         // 사용자 인증 로직
         User user = userService.authenticate(userLoginRequestDTO.getUsername(), userLoginRequestDTO.getPassword());
         if (user != null) {
+            request.setAttribute(AuthRateLimitInterceptor.SUCCESS_ATTRIBUTE, true);
             // 세션 고정 공격 방어: 기존 세션 무효화 후 새로운 세션 생성
             HttpSession oldSession = request.getSession(false);
             if (oldSession != null) {
@@ -104,6 +106,7 @@ public class AuthController {
 
             return user.getRole() == UserRole.CUSTOMER ? "redirect:/shop" : "redirect:/home2"; // 로그인 후 대시보드로 리다이렉트
         } else {
+            request.setAttribute(AuthRateLimitInterceptor.FAILURE_ATTRIBUTE, true);
             bindingResult.reject("invalidCredentials", "사용자명 또는 비밀번호가 잘못되었습니다.");
             return "login";
         }
