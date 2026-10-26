@@ -29,6 +29,8 @@ jobs:
           java-version: '21'
       - name: Tests and JAR
         run: bash gradlew --no-daemon test bootJar
+      - name: Block unsafe built Java runtime before image or release packaging
+        run: bash scripts/security/scan-built-java.sh build/libs
       - name: Required environment fails closed
         run: |
           if env -u DB_PASSWORD docker compose -f compose.production.yaml config -q; then
