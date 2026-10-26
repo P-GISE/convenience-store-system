@@ -53,3 +53,4 @@ printf '%s\n' "INSERT INTO order_types(name) VALUES ('synthetic-persistence-sent
 "${compose[@]}" up -d --wait --wait-timeout 180 app
 [[ "$(printf '%s\n' "SELECT COUNT(*) FROM order_types WHERE name='synthetic-persistence-sentinel';" | sql)" == 1 ]]
 echo 'PASS: runtime DDL denied and existing data survives restart' | tee -a build/deployment-evidence/results.log
+python3 scripts/platform-upgrade-check.py

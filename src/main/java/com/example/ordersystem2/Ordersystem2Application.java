@@ -7,7 +7,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.core.env.Profiles;
 import com.example.ordersystem2.service.OperatorBootstrapService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @EnableJpaAuditing
 @SpringBootApplication
@@ -20,7 +20,7 @@ public class Ordersystem2Application {
 				if (!context.getEnvironment().acceptsProfiles(Profiles.of("prod"))) {
 					throw new IllegalStateException("production_profile_required");
 				}
-				context.getBean(OperatorBootstrapService.class).apply(new ObjectMapper().readTree(System.in));
+				context.getBean(OperatorBootstrapService.class).apply(JsonMapper.builder().build().readTree(System.in));
 				System.out.println("operator_bootstrap status=created");
 			} catch (Exception error) {
 				// Input may contain a password; never print exception messages or the JSON.

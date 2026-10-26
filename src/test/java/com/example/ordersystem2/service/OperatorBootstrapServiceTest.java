@@ -4,7 +4,7 @@ import com.example.ordersystem2.model.UserRole;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
 import com.example.ordersystem2.repository.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +20,7 @@ class OperatorBootstrapServiceTest {
     @Autowired OrderTypeRepository products;
     @Autowired InventoryRepository inventory;
     @Autowired UserService userService;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final JsonMapper mapper = JsonMapper.builder().build();
 
     @Test
     void explicitOperatorCreatesHashedAccountAndAssignedProduct() throws Exception {

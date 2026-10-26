@@ -8,7 +8,7 @@ import com.example.ordersystem2.model.UserRole;
 import com.example.ordersystem2.repository.InventoryRepository;
 import com.example.ordersystem2.repository.OrderTypeRepository;
 import com.example.ordersystem2.repository.UserRepository;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
@@ -70,15 +70,15 @@ public class OperatorBootstrapService {
     }
 
     private static String text(JsonNode input, String key) {
-        if (input == null || !input.isObject() || !input.hasNonNull(key) || !input.get(key).isTextual()) {
+        if (input == null || !input.isObject() || !input.hasNonNull(key) || !input.get(key).isString()) {
             throw new IllegalArgumentException("invalid_input");
         }
-        return input.get(key).textValue();
+        return input.get(key).stringValue();
     }
 
     private static void fields(JsonNode input, Set<String> expected) {
         Set<String> actual = new HashSet<>();
-        input.fieldNames().forEachRemaining(actual::add);
+        actual.addAll(input.propertyNames());
         if (!actual.equals(expected)) {
             throw new IllegalArgumentException("unexpected_input_fields");
         }
