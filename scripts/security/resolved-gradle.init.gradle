@@ -1,0 +1,9 @@
+// Security metadata only; never writes application lockfiles or changes dependencies.
+def outputDirectory = System.getenv('SECURITY_LOCK_DIR')
+if (!outputDirectory) throw new GradleException('SECURITY_LOCK_DIR is required')
+allprojects {
+    dependencyLocking {
+        lockAllConfigurations()
+        lockFile = file("${outputDirectory}/${project.path.replace(':', '_')}.gradle.lockfile")
+    }
+}

@@ -19,3 +19,18 @@ java_scan_status=0
   --timeout 10m --no-progress --format json --output "$java_scan_temp/report.json" "$artifact_root" \
   > "$java_scan_temp/scanner.log" 2>&1 || java_scan_status=$?
 python3 scripts/security/check-built-java.py "$java_scan_temp/report.json" "$java_scan_status"
+[[ -n ${RUNNER_TEMP:-} ]]
+for configuration in runtimeClasspath testRuntimeClasspath; do
+  mkdir -p "$java_scan_temp/resolved/$configuration"
+  SECURITY_LOCK_DIR="$java_scan_temp/resolved/$configuration" bash gradlew --no-daemon \
+    --init-script scripts/security/resolved-gradle.init.gradle \
+    dependencies --configuration "$configuration" --write-locks \
+    > "$java_scan_temp/gradle-$configuration.log" 2>&1
+done
+resolved_status=0
+"$java_scan_temp/trivy" fs --config='' --ignorefile='' --scanners vuln --pkg-types library \
+  --include-dev-deps --severity HIGH,CRITICAL --exit-code 1 --offline-scan \
+  --disable-telemetry --skip-version-check --timeout 10m --no-progress --format json \
+  --output "$java_scan_temp/resolved.json" "$java_scan_temp/resolved" \
+  > "$java_scan_temp/resolved-scanner.log" 2>&1 || resolved_status=$?
+python3 scripts/security/check-resolved-gradle.py "$java_scan_temp/resolved.json" "$resolved_status"

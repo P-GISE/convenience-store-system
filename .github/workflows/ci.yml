@@ -30,7 +30,9 @@ jobs:
       - name: Tests and JAR
         run: bash gradlew --no-daemon test bootJar
       - name: Block unsafe built Java runtime before image or release packaging
-        run: bash scripts/security/scan-built-java.sh build/libs
+        run: |
+          python3 -m unittest discover -s scripts/security -p test_resolved_gradle.py
+          bash scripts/security/scan-built-java.sh build/libs
       - name: Required environment fails closed
         run: |
           if env -u DB_PASSWORD docker compose -f compose.production.yaml config -q; then
