@@ -27,6 +27,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Verified event deployment workflow regressions
+        run: python3 scripts/deploy/test_event_workflow.py
       - name: Tests and JAR
         run: bash gradlew --no-daemon test bootJar
       - name: Block unsafe built Java runtime before image or release packaging
