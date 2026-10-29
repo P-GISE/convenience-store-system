@@ -112,3 +112,11 @@ GitHub CI는 성공한 main 커밋의 이미지를 `five-sites-app-<SHA>` 아티
 - MySQL 데이터는 `<project>_database` volume에 있다. 컨테이너 교체와 앱 restart는 이를 지우지 않는다. 운영에서 `down -v`/volume 삭제는 금지한다.
 - 스키마 변경 후에는 이전 코드가 현재 스키마와 호환되는지 먼저 확인한다. 앱 롤백은 DB 롤백이 아니며 DB 복구에는 검증된 별도 백업이 필요하다.
 - PR/소스 브랜치 CI에는 운영 배포, 운영 비밀, 외부 계정 생성, DNS 변경이 없다. MySQL image/베이스 OS 버전 고정 digest와 조직별 보안 업데이트 정책은 운영 승인 단계에서 확정한다.
+
+## GitHub 이벤트 배포 전환 준비 (2026-10-29)
+
+.github/workflows/deploy-event.yml은 main push의 'Build and synthetic deployment check' 완료 이벤트와 수동 recovery를 받는다. 두 경로 모두 GitHub REST에서 정확한 run ID를 다시 읽어 고정 저장소·head repository·main·push·ci.yml·완료·성공·SHA를 검증한다. PR 또는 다른 branch의 run은 배포 대상이 아니다. 특권 job은 소스를 checkout하지 않는다.
+
+프로젝트 전용 STORE_DEPLOY_SSH_KEY, STORE_DEPLOY_KNOWN_HOSTS, STORE_DEPLOY_TARGET 세 repository secret과 S2 제한 SSH entry 설치가 필요하다. 고정 command는 'event-deploy-convenience-store <SHA40> <run ID>'이며 strict host pinning과 일시 key 파일 0600/종료 정리를 사용한다. 같은 프로젝트 실행은 취소 없이 queue에 쌓이고 원격 lock timeout(exit 75 및 정확한 오류)만 최대 20분 재시도한다. 성공 receipt의 요청 SHA/run, 실제 배포 run/artifact run 및 image digest를 검사한다. 수동 recovery에는 성공한 main push CI의 정확한 run ID와 SHA를 입력한다.
+
+현재 이 변경은 로컬 candidate 준비 단계다. 이 작업에서 key/secret 등록, S2 설치, 실제 workflow_run 배포와 receipt/health 검증은 아직 수행하지 않았다. 운영 권한과 보호 tree의 네 파일 delta를 별도 검토한 후 merge해야 한다. 실제 새 push CI → 이벤트 → 제한 command → 배포 SHA/run/image/health 및 실패·lock retry·수동 recovery를 확인하기 전 기존 timer를 유지한다. 기존 security/runtime gate와 앱·DB·SMTP·Supabase 정책을 변경하지 않는다.
